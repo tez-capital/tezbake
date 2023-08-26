@@ -1,0 +1,62 @@
+name: release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '>=1.22.0'
+      - name: Test
+        run: go test -v ./...
+      - name: Build linux-arm64
+        run: env CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -trimpath -o bin/tezbake-linux-arm64
+      - name: Build linux-amd64
+        run: env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -trimpath -o bin/tezbake-linux-amd64
+      - name: Upload files to a GitHub release
+        uses: svenstaro/upload-release-action@2.4.0
+        with:
+          file_glob: true
+          tag: ${{ github.ref }}
+          file: bin/tezbake*
+
+      # - uses: actions/checkout@v4
+      #   with:
+      #     repository: tez-capital/tezbake-releases
+      #     path: releases
+      #     token: ${{ secrets.TZC_TEZBAKE_RELEASES_RW_AT }}
+
+      # - name: Copy releases
+      #   run: cp -r bin/* releases/
+      
+      # - name: Copy command reference
+      #   run: |
+      #     mkdir -p releases/cmd
+      #     cp -r docs/cmd/* releases/cmd/
+
+      # - name: Commit and push changes
+      #   working-directory: releases
+      #   run: |
+      #       git config --global user.email "bake-buddy-bot@tez.capital"
+      #       git config --global user.name "BakeBuddyBot"
+      #       git add -A
+      #       git commit -m "Release ${{ github.ref_name }}"
+      #       git push
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Notify new version available
+        uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.BB_DISCORD_HOOK }}
+        with:
+            args: "New tezbake ${{ github.ref_name }} released. (<https://github.com/tez-capital/tezbake/releases/tag/${{ github.ref_name }}>)"

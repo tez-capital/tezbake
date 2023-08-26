@@ -1,0 +1,15 @@
+# builds
+bin/*
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# server while not public
+server/*
+!server/.gitkeep
+
+# for experiments
+exp.go
