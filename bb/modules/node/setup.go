@@ -2,6 +2,7 @@ package bb_module_node
 
 import (
 	"fmt"
+	"os"
 
 	"alis.is/bb-cli/ami"
 	bb_module "alis.is/bb-cli/bb/modules"
@@ -31,7 +32,12 @@ func (app *Node) Setup(ctx *bb_module.SetupContext, args ...string) (int, error)
 				log.Info("Old remove locator found. Merging...")
 				config.PopulateWith(locator)
 			}
-			ami.WriteRemoteLocator(app.GetPath(), ctx.ToRemoteConfiguration(app), ctx.RemoteReset)
+			err = os.MkdirAll(app.GetPath(), os.ModePerm)
+			if err != nil {
+				return -1, fmt.Errorf("failed to create directory structure for remote node locator - %s", err.Error())
+			}
+			ami.WriteRemoteElevationCredentials(app.GetPath(), config, ctx.ToRemoteElevateCredentials())
+			ami.WriteRemoteLocator(app.GetPath(), config, ctx.RemoteReset)
 			err = ami.PrepareRemote(app.GetPath(), config, ctx.RemoteAuth)
 			if err != nil {
 				return -1, fmt.Errorf("failed to create remote node locator - %s", err.Error())

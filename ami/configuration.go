@@ -8,6 +8,7 @@ import (
 	"path"
 
 	"alis.is/bb-cli/cli"
+	"alis.is/bb-cli/system"
 
 	"github.com/hjson/hjson-go"
 	"github.com/pkg/sftp"
@@ -73,6 +74,7 @@ func LoadAppConfiguration(app string) (map[string]interface{}, error) {
 func writeAppConfigurationToRemote(sftpClient *sftp.Client, workingDir string, configuration map[string]interface{}) error {
 	var appDef []byte
 	var appDefPath string
+	log.Tracef("Writing app configuration to remote %s...", workingDir)
 	err := os.MkdirAll(workingDir, os.ModePerm)
 	if err == nil {
 		appDef, err = json.MarshalIndent(configuration, "", "\t")
@@ -93,6 +95,7 @@ func writeAppConfigurationToRemote(sftpClient *sftp.Client, workingDir string, c
 	if err == nil {
 		err = appDefFile.Chmod(0644)
 	}
+	log.Tracef("App configuration written to %s", appDefPath)
 	return err
 }
 
@@ -102,6 +105,7 @@ func WriteAppDefinition(workingDir string, configuration map[string]interface{},
 		if err != nil {
 			return err
 		}
+		system.RunSshCommand(session.sshClient, "mkdir -p "+path.Join(locator.InstancePath, locator.App), locator.GetElevationCredentials())
 		return writeAppConfigurationToRemote(session.sftpSession, path.Join(locator.InstancePath, locator.App), configuration)
 	}
 	var appDef []byte

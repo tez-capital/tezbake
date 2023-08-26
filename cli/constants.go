@@ -5,6 +5,6 @@ const (
 	DefaultRemoteBBDirectory string = DefaultBBDirectory
 	DefaultRemoteUser        string = "bb"
 	DefaultSshUser           string = "root"
-	DefaultBbCliUrl          string = "https://gitlab.com/groktech/bakebuddy-cli/-/raw/main/ALPHA-bb-cli-linux-%s?inline=false"
+	DefaultBbCliUrl          string = "https://gitlab.com/groktech/bakebuddy-cli/-/raw/main/bb-cli-linux-%s?inline=false"
 	DefaultAppJsonName       string = "app.json"
 )

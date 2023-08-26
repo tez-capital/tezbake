@@ -2,9 +2,11 @@ package ami
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -13,6 +15,7 @@ import (
 	"alis.is/bb-cli/system"
 	"alis.is/bb-cli/util"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/pkg/sftp"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
@@ -23,30 +26,51 @@ var (
 	REMOTE_VARS               = make(map[string]string)
 )
 
+type ERemoteElevationKind string
+
+const (
+	REMOTE_ELEVATION_NONE ERemoteElevationKind = ""
+	REMOTE_ELEVATION_SU   ERemoteElevationKind = "su"
+	REMOTE_ELEVATION_SUDO ERemoteElevationKind = "sudo"
+)
+
 type RemoteElevateCredentials struct {
-	REMOTE_SU_USER   string
-	REMOTE_SU_PASS   string
-	REMOTE_SUDO_PASS string
+	Kind     ERemoteElevationKind `json:"kind"`
+	User     string               `json:"user"`
+	Password string               `json:"password"`
 }
 
 func (creds *RemoteElevateCredentials) ToEnvMap() *map[string]string {
-	return &map[string]string{
-		RemoteSuUser:   creds.REMOTE_SU_USER,
-		RemoteSuPass:   creds.REMOTE_SU_PASS,
-		RemoteSudoPass: creds.REMOTE_SUDO_PASS,
+	switch creds.Kind {
+	case REMOTE_ELEVATION_NONE:
+		return &map[string]string{}
+	case REMOTE_ELEVATION_SU:
+		return &map[string]string{
+			"KIND":     string(creds.Kind),
+			"USER":     creds.User,
+			"PASSWORD": creds.Password,
+		}
+	case REMOTE_ELEVATION_SUDO:
+		return &map[string]string{
+			"KIND":     string(creds.Kind),
+			"PASSWORD": creds.Password,
+		}
 	}
+	return &map[string]string{}
 }
 
 type RemoteConfiguration struct {
-	App                  string
-	Host                 string
-	Username             string
-	InstancePath         string
-	Elevate              string
-	PrivateKey           string
-	PublicKey            string
-	Port                 string
-	ElevationCredentials RemoteElevateCredentials
+	ElevationCredentialsDirectory string
+	App                           string               `json:"app"`
+	Host                          string               `json:"host"`
+	Username                      string               `json:"username"`
+	InstancePath                  string               `json:"path"`
+	Elevate                       ERemoteElevationKind `json:"elevate"`
+	PrivateKey                    string               `json:"privateKey"`
+	PublicKey                     string               `json:"publicKey"`
+	Port                          string               `json:"port"`
+	elevationCredentials          *RemoteElevateCredentials
+	// ElevationCredentials RemoteElevateCredentials
 }
 
 // Fills empty values with values from other config
@@ -60,6 +84,66 @@ func (config *RemoteConfiguration) ToSshConnectionDetails() *system.SshConnectio
 		Host:     config.Host,
 		Port:     config.Port,
 	}
+}
+
+func (config *RemoteConfiguration) GetElevationCredentials() (*RemoteElevateCredentials, error) {
+	if config.Elevate == REMOTE_ELEVATION_NONE {
+		return &RemoteElevateCredentials{Kind: REMOTE_ELEVATION_NONE}, nil
+	}
+
+	if config.elevationCredentials != nil {
+		return config.elevationCredentials, nil
+	}
+
+	encPath := filepath.Join(config.ElevationCredentialsDirectory, ElevationCredentialsEncFile)
+	plainPath := filepath.Join(config.ElevationCredentialsDirectory, ElevationCredentialsFile)
+
+	if _, err := os.Stat(encPath); !os.IsNotExist(err) {
+		var password string
+		prompt := &survey.Password{
+			Message: "Enter password to unlock credentials for elevation:",
+		}
+		err := survey.AskOne(prompt, &password)
+		if err != nil {
+			return nil, err
+		}
+
+		encData, err := os.ReadFile(encPath)
+		if err != nil {
+			return nil, err
+		}
+
+		key := util.PrepareAESKey(password, config.Host+config.Username)
+		decData, err := util.DecryptAES(key, encData)
+		if err != nil {
+			return nil, err
+		}
+
+		var credentials RemoteElevateCredentials
+		if err := json.Unmarshal(decData, &credentials); err != nil {
+			return nil, err
+		}
+
+		credentials.Kind = config.Elevate
+		config.elevationCredentials = &credentials
+		return &credentials, nil
+	}
+
+	if _, err := os.Stat(encPath); !os.IsNotExist(err) {
+		data, err := os.ReadFile(plainPath)
+		if err != nil {
+			return nil, err
+		}
+
+		var credentials RemoteElevateCredentials
+		if err := json.Unmarshal(data, &credentials); err != nil {
+			return nil, err
+		}
+		config.elevationCredentials = &credentials
+		return &credentials, nil
+	}
+
+	return nil, errors.New("no elevate credentials found")
 }
 
 func (config *RemoteConfiguration) ToAppKeyPair() *AppKeyPair {
@@ -89,7 +173,14 @@ func GetNewAppKeyPair() *AppKeyPair {
 	}
 }
 
+var (
+	remoteLocatorsCache = make(map[string]*RemoteConfiguration)
+)
+
 func LoadRemoteLocator(appDir string) (*RemoteConfiguration, error) {
+	if locator, ok := remoteLocatorsCache[appDir]; ok {
+		return locator, nil
+	}
 	remoteConfiguration := RemoteConfiguration{}
 	locatorFile := path.Join(appDir, LocatorFile)
 	file, err := os.ReadFile(locatorFile)
@@ -100,6 +191,8 @@ func LoadRemoteLocator(appDir string) (*RemoteConfiguration, error) {
 	if err != nil {
 		return nil, err
 	}
+	remoteConfiguration.ElevationCredentialsDirectory = appDir
+	remoteLocatorsCache[appDir] = &remoteConfiguration
 	return &remoteConfiguration, nil
 }
 
@@ -151,6 +244,30 @@ func WriteRemoteLocator(appDir string, rc *RemoteConfiguration, reset bool) {
 	util.AssertEE(os.WriteFile(remoteConfigurationPath, serializedRemoteConfiguration, 0644), "Failed to write remote app locator!", cli.ExitIOError)
 }
 
+func WriteRemoteElevationCredentials(appDir string, rc *RemoteConfiguration, credentials *RemoteElevateCredentials) {
+	log.Trace("Writing elevation credentials of '" + appDir + "' for '" + rc.InstancePath + "'...")
+	serializedCredentials, err := json.MarshalIndent(credentials, "", "\t")
+	util.AssertEE(err, "Failed to serialize remote elevation credentials!", cli.ExitSerializationFailed)
+
+	password := ""
+	prompt := &survey.Password{
+		Message: "Enter password to encrypt credentials for elevation:",
+	}
+	err = survey.AskOne(prompt, &password)
+	util.AssertE(err, "failed to get password")
+
+	elevationCredentialsFileName := ElevationCredentialsEncFile
+	if password == "" {
+		elevationCredentialsFileName = ElevationCredentialsFile
+	} else {
+		key := util.PrepareAESKey(password, rc.Host+rc.Username)
+		serializedCredentials, err = util.EncryptAES(key, serializedCredentials)
+		util.AssertE(err, "failed to encrypt credentials")
+	}
+	credentialsPath := path.Join(appDir, elevationCredentialsFileName)
+	util.AssertEE(os.WriteFile(credentialsPath, serializedCredentials, 0644), "Failed to write remote elevation credentials!", cli.ExitIOError)
+}
+
 func GetRemoteArchitecture(client *ssh.Client) string {
 	result := system.RunSshCommand(client, "uname -m", nil)
 	util.AssertE(result.Error, "Failed to get remote cpu architecture!")
@@ -172,19 +289,21 @@ func executePreparationStage(config *RemoteConfiguration, mode string, key []byt
 	defer sshClient.Close()
 	defer sftp.Close()
 
-	switch config.Elevate {
-	case SuElevate:
-		// TODO:
-	case SudoElevate:
-		// TODO:
-	}
+	credentials, err := config.GetElevationCredentials()
+	util.AssertE(err, "Failed to get elevation credentials!")
 	platform := GetRemoteArchitecture(sshClient)
 	bbCliForRemoteFile := "bb-cli-for-remote"
 
 	log.Trace("Downloading and installing bb-cli for remote...")
 	// download bb-cli for remote locally
-	err := util.DownloadFile(fmt.Sprintf(cli.DefaultBbCliUrl, platform), bbCliForRemoteFile, false)
-	util.AssertE(err, "Failed to download bb-cli for the remote!")
+
+	remoteCliSource := os.Getenv("REMOTE_CLI_SOURCE")
+	if remoteCliSource != "" {
+		bbCliForRemoteFile = remoteCliSource
+	} else {
+		err := util.DownloadFile(fmt.Sprintf(cli.DefaultBbCliUrl, platform), bbCliForRemoteFile, false)
+		util.AssertE(err, "Failed to download bb-cli for the remote!")
+	}
 	// open tmp file in remote
 	tmpBbCliPath := path.Join("/tmp", bbCliForRemoteFile)
 	bbCliFile, err := sftp.Create(tmpBbCliPath)
@@ -197,7 +316,7 @@ func executePreparationStage(config *RemoteConfiguration, mode string, key []byt
 	// move file to sbin
 	result := system.RunSshCommand(sshClient, "chmod +x "+tmpBbCliPath, nil)
 	util.AssertE(result.Error, "Failed to activate bb-cli!")
-	result = system.RunSshCommand(sshClient, fmt.Sprintf("mv '%s' /usr/sbin/bb-cli", tmpBbCliPath), nil)
+	result = system.RunSshCommand(sshClient, fmt.Sprintf("%s install && rm %s", tmpBbCliPath, tmpBbCliPath), credentials.ToEnvMap())
 	util.AssertE(result.Error, "Failed to copy bb-cli to sbin!")
 
 	log.Trace("Injecting ssh keys...")
@@ -210,6 +329,7 @@ func executePreparationStage(config *RemoteConfiguration, mode string, key []byt
 	// write if necessary
 	result = system.RunSshCommand(sshClient, fmt.Sprintf("grep \"%s\" ~/.ssh/authorized_keys || echo \"%s\" >> ~/.ssh/authorized_keys", pubKey, pubKey), nil)
 	util.AssertE(result.Error, "Failed to inject BB public key!")
+	log.Info("Remote prepared!")
 }
 
 func PrepareRemote(appDir string, config *RemoteConfiguration, auth string) error {
@@ -241,6 +361,7 @@ type AppRemoteSession struct {
 	sshClient    *ssh.Client
 	sftpSession  *sftp.Client
 	instancePath string
+	locator      *RemoteConfiguration
 }
 
 func (session *AppRemoteSession) Close() {
@@ -270,6 +391,7 @@ func (locator *RemoteConfiguration) OpenAppRemoteSessionS() (*AppRemoteSession, 
 		sshClient:    client,
 		sftpSession:  sftp,
 		instancePath: locator.InstancePath,
+		locator:      locator,
 	}, err
 }
 
@@ -316,46 +438,54 @@ func (session *AppRemoteSession) prepareArgsForProxy(passthrough bool) []string 
 	return proxyArgs
 }
 
-func (session *AppRemoteSession) ProxyToRemoteApp(env *map[string]string) (int, error) {
+func runSshCommand(client *ssh.Client, cmd string, locator *RemoteConfiguration, fn func(*ssh.Client, string, *map[string]string) *system.SshCommandResult) *system.SshCommandResult {
+	log.Debug("Entering remote land...")
+	defer log.Debug("Returning to homeland...")
+
+	result := fn(client, cmd, nil)
+	if result.Error != nil && result.ExitCode == cli.ExitElevationRequired {
+		if locator.Elevate == REMOTE_ELEVATION_NONE {
+			return result
+		}
+		elevationCredentials, err := locator.GetElevationCredentials()
+		if err != nil {
+			return result
+		}
+		if elevationCredentials.Kind == REMOTE_ELEVATION_NONE {
+			return result
+		}
+		result = fn(client, cmd, elevationCredentials.ToEnvMap())
+	}
+	return result
+}
+
+func (session *AppRemoteSession) ProxyToRemoteApp() (int, error) {
 	args := session.prepareArgsForProxy(true)
-	log.Info("Entering remote land...")
-	result := system.RunPipedSshCommand(session.sshClient, strings.Join(args, " "), env)
-	// TODO: proper exit code
-	log.Info("Returning to homeland...")
-	if result.Error != nil {
-		return -1, result.Error
-	}
-	return 0, nil
+	result := runSshCommand(session.sshClient, strings.Join(args, " "), session.locator, system.RunPipedSshCommand)
+	return result.ExitCode, result.Error
 }
 
-func (session *AppRemoteSession) ProxyToRemoteAppGetOutput(env *map[string]string) (string, int, error) {
+func (session *AppRemoteSession) ProxyToRemoteAppGetOutput() (string, int, error) {
 	args := session.prepareArgsForProxy(false)
-	log.Info("Entering remote land...")
-	result := system.RunSshCommand(session.sshClient, strings.Join(args, " "), env)
-	// TODO: proper exit code
-	log.Info("Returning to homeland...")
-	if result.Error != nil {
-		return "", -1, result.Error
-	}
-	return string(result.Stdout), 0, nil
+
+	result := runSshCommand(session.sshClient, strings.Join(args, " "), session.locator, system.RunSshCommand)
+
+	return string(result.Stdout), result.ExitCode, result.Error
 }
 
-func (session *AppRemoteSession) ProxyToRemoteAppExecuteInfo(env *map[string]string) ([]byte, int, error) {
+func (session *AppRemoteSession) ProxyToRemoteAppExecuteInfo() ([]byte, int, error) {
 	args := session.prepareArgsForProxy(false)
-	result := system.RunSshCommand(session.sshClient, strings.Join(args, " "), env)
-	// TODO: proper exit code
-	if result.Error != nil {
-		return []byte{}, -1, result.Error
-	}
-	return result.Stdout, 0, nil
+
+	result := runSshCommand(session.sshClient, strings.Join(args, " "), session.locator, system.RunSshCommand)
+
+	return result.Stdout, result.ExitCode, result.Error
 }
 
-func (session *AppRemoteSession) IsRemoteModuleInstalled(id string, env *map[string]string) ([]byte, int, error) {
+func (session *AppRemoteSession) IsRemoteModuleInstalled(id string) ([]byte, int, error) {
 	args := session.prepareArgsForProxy(false)
 	args = append(args, fmt.Sprintf("--is-module-installed=%s", id))
-	result := system.RunSshCommand(session.sshClient, strings.Join(args, " "), env)
-	if result.Error != nil {
-		return []byte{}, -1, result.Error
-	}
-	return result.Stdout, 0, nil
+
+	result := runSshCommand(session.sshClient, strings.Join(args, " "), session.locator, system.RunSshCommand)
+
+	return result.Stdout, result.ExitCode, result.Error
 }

@@ -18,25 +18,25 @@ import (
 )
 
 const (
-	RemoteNode             string = "remote-node"
-	RemoteAuth             string = "remote-auth"
-	RemoteElevate          string = "remote-elevate"
-	RemoteUser             string = "remote-user"
-	RemotePath             string = "remote-path"
-	RemoteReset            string = "remote-reset"
-	UpgradeStorage         string = "upgrade-storage"
-	Branch                 string = "branch"
-	Id                     string = "id"
-	User                   string = "user"
-	Node                   string = "node"
-	NodeVersion            string = "node-version"
-	NodeConfiguration      string = "node-configuration"
-	Signer                 string = "signer"
-	SignerVersion          string = "signer-version"
-	SignerConfiguration    string = "signer-configuration"
-	SetupAmi               string = "setup-ami"
-	OneTimeRemoteElevation string = "one-time-remote-elevation"
-	Force                  string = "force"
+	RemoteNode          = "remote-node"
+	RemoteAuth          = "remote-auth"
+	RemoteElevate       = "remote-elevate"
+	RemoteElevateUser   = "remote-elevate-user"
+	RemoteUser          = "remote-user"
+	RemotePath          = "remote-path"
+	RemoteReset         = "remote-reset"
+	UpgradeStorage      = "upgrade-storage"
+	Branch              = "branch"
+	Id                  = "id"
+	User                = "user"
+	Node                = "node"
+	NodeVersion         = "node-version"
+	NodeConfiguration   = "node-configuration"
+	Signer              = "signer"
+	SignerVersion       = "signer-version"
+	SignerConfiguration = "signer-configuration"
+	SetupAmi            = "setup-ami"
+	Force               = "force"
 )
 
 var setupCmd = &cobra.Command{
@@ -85,6 +85,16 @@ var setupCmd = &cobra.Command{
 			}
 		}
 
+		var remoteElevatePassword string
+		remoteElevate := util.GetCommandStringFlagS(cmd, RemoteElevate)
+		if remoteElevate != "" {
+			prompt := &survey.Password{
+				Message: "Enter password to use for elevation on remote:",
+			}
+			err := survey.AskOne(prompt, &remoteElevatePassword)
+			util.AssertE(err, "Remote elevate requires password!")
+		}
+
 		for _, v := range bb.Modules {
 			moduleId := v.GetId()
 			if cli.IsRemoteInstance && !v.SupportsRemote() {
@@ -104,14 +114,17 @@ var setupCmd = &cobra.Command{
 					Branch:        branch,
 					User:          username,
 
-					Remote:         util.GetCommandStringFlagS(cmd, RemoteNode),
-					RemoteAuth:     util.GetCommandStringFlagS(cmd, RemoteAuth),
-					RemotePath:     util.GetCommandStringFlagS(cmd, RemotePath),
-					RemoteElevate:  util.GetCommandStringFlagS(cmd, RemoteElevate),
-					RemoteUser:     util.GetCommandStringFlagS(cmd, RemoteUser),
-					RemoteReset:    util.GetCommandBoolFlagS(cmd, RemoteReset),
-					OneTimeElevate: util.GetCommandBoolFlagS(cmd, OneTimeRemoteElevation),
-					Force:          force,
+					Remote:      util.GetCommandStringFlagS(cmd, RemoteNode),
+					RemoteAuth:  util.GetCommandStringFlagS(cmd, RemoteAuth),
+					RemotePath:  util.GetCommandStringFlagS(cmd, RemotePath),
+					RemoteUser:  util.GetCommandStringFlagS(cmd, RemoteUser),
+					RemoteReset: util.GetCommandBoolFlagS(cmd, RemoteReset),
+
+					RemoteElevate:         ami.ERemoteElevationKind(remoteElevate),
+					RemoteElevateUser:     util.GetCommandStringFlagS(cmd, RemoteElevateUser),
+					RemoteElevatePassword: remoteElevatePassword,
+
+					Force: force,
 				}
 
 				if ami.IsAppInstalled(v.GetPath()) && !force && !cli.IsRemoteInstance {
@@ -161,11 +174,13 @@ func init() {
 	setupCmd.Flags().String(RemoteNode, "", "username:<ssh key file>@address (experimental)")
 	setupCmd.Flags().String(RemoteAuth, "", "pass|key:<path to key>  (experimental)")
 	setupCmd.Flags().String(RemotePath, cli.DefaultRemoteBBDirectory, "where on remote install node - defaults to '/bake-buddy/node' (experimental)")
-	setupCmd.Flags().String(RemoteElevate, "", "su or sudo (Not available)")
+	setupCmd.Flags().String(RemoteElevate, "", "only 'sudo' supported now (experimental)")
+	setupCmd.Flags().String(RemoteElevateUser, "", "user to elevate to (experimental)")
+	setupCmd.Flags().MarkHidden(RemoteElevateUser)
 	setupCmd.Flags().String(RemoteUser, cli.DefaultRemoteUser, "Sets user remote node will be operated under. (experimental)")
+
 	setupCmd.Flags().Bool(RemoteReset, false, "Resets and reconfigures remote node locator. (experimental)")
 
 	setupCmd.Flags().String(Branch, "main", "Select package release branch you want to setup (addets node and signer module only).")
-	//setupCmd.Flags().BoolP(OneTimeRemoteElevation, "x", false, "Path to custom signer configuration.(Not available)")
 	RootCmd.AddCommand(setupCmd)
 }

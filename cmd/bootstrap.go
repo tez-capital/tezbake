@@ -47,7 +47,7 @@ var bootstrapNodeCmd = &cobra.Command{
 		if isRemote, locator := ami.IsRemoteApp(bb.Node.GetPath()); isRemote {
 			session, err := locator.OpenAppRemoteSessionS()
 			util.AssertE(err, "Failed to open remote session!")
-			exitCode, _ := session.ProxyToRemoteApp(locator.ElevationCredentials.ToEnvMap())
+			exitCode, _ := session.ProxyToRemoteApp()
 			os.Exit(exitCode)
 		}
 

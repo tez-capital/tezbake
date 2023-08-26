@@ -51,7 +51,7 @@ func (app *Node) IsInstalled() bool {
 	if isRemote, locator := ami.IsRemoteApp(app.GetPath()); isRemote {
 		session, err := locator.OpenAppRemoteSessionS()
 		if err == nil {
-			output, _, err := session.IsRemoteModuleInstalled(app.GetId(), locator.ElevationCredentials.ToEnvMap())
+			output, _, err := session.IsRemoteModuleInstalled(app.GetId())
 			if err == nil {
 				return strings.Contains(string(output), "true")
 			}

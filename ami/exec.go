@@ -17,7 +17,7 @@ func Execute(workingDir string, args ...string) (int, error) {
 		if err != nil {
 			return -1, err
 		}
-		return session.ProxyToRemoteApp(locator.ElevationCredentials.ToEnvMap())
+		return session.ProxyToRemoteApp()
 	}
 
 	eliPath, err := exec.LookPath("eli")
@@ -55,7 +55,7 @@ func ExecuteGetOutput(workingDir string, args ...string) (string, int, error) {
 		if err != nil {
 			return "", -1, err
 		}
-		return session.ProxyToRemoteAppGetOutput(locator.ElevationCredentials.ToEnvMap())
+		return session.ProxyToRemoteAppGetOutput()
 	}
 
 	eliPath, err := exec.LookPath("eli")
@@ -90,7 +90,7 @@ func ExecuteInfo(workingDir string, args ...string) ([]byte, int, error) {
 		if err != nil {
 			return []byte{}, -1, err
 		}
-		return session.ProxyToRemoteAppExecuteInfo(locator.ElevationCredentials.ToEnvMap())
+		return session.ProxyToRemoteAppExecuteInfo()
 	}
 
 	eliPath, err := exec.LookPath("eli")

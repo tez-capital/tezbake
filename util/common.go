@@ -21,6 +21,12 @@ func AssignIfEmptyR(val reflect.Value, candidate reflect.Value) {
 }
 func AssignStructFieldsIfEmptyR(targetReflect reflect.Value, sourceReflect reflect.Value) {
 	for i := 0; i < targetReflect.NumField(); i++ {
+		fieldType := targetReflect.Type().Field(i)
+
+		// If PkgPath is non-empty, the field is unexported, so skip it
+		if fieldType.PkgPath != "" {
+			continue
+		}
 		field := targetReflect.Field(i)
 		switch field.Kind() {
 		case reflect.Struct:
@@ -29,6 +35,7 @@ func AssignStructFieldsIfEmptyR(targetReflect reflect.Value, sourceReflect refle
 			AssignIfEmptyR(field, sourceReflect.Field(i))
 		}
 	}
+
 }
 
 func AssignStructFieldsIfEmpty[T interface{}](target *T, source *T) {

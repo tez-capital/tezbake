@@ -13,7 +13,6 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/pkg/sftp"
-	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -29,9 +28,10 @@ type SshConnectionDetails struct {
 }
 
 type SshCommandResult struct {
-	Stdout []byte
-	Stderr []byte
-	Error  error
+	Stdout   []byte
+	Stderr   []byte
+	Error    error
+	ExitCode int
 }
 
 func promptForPassword(reason string, failureMsg string) []byte {
@@ -110,19 +110,7 @@ func OpenSshSessionS(connectionDetails *SshConnectionDetails, mode string, priva
 	if err != nil {
 		return nil, nil, err
 	}
-	//defer session.Close()
 
-	/**
-	var b bytes.Buffer  // import "bytes"
-	session.Stdout = &b // get output
-	// you can also pass what gets input to the stdin, allowing you to pipe
-	// content from client to server
-	//      session.Stdin = bytes.NewBufferString("My input")
-
-	// Finally, run the command
-	err = session.Run(cmd)
-	return b.String(), err
-	*/
 	return client, sftp, nil
 }
 
@@ -138,29 +126,39 @@ func RunSshCommand(client *ssh.Client, cmd string, env *map[string]string) *SshC
 	session, err := client.NewSession()
 	if err != nil {
 		return &SshCommandResult{
-			Error: err,
+			Error:    err,
+			ExitCode: -1,
 		}
 	}
 	defer session.Close()
 	session.Stdout = &stdout
 	session.Stderr = &stderr
 
+	envList := make([]string, 0)
 	if env != nil {
 		for k, v := range *env {
-			err = session.Setenv(k, v)
-			if err != nil {
-				log.Debug(err.Error())
-			}
+			escapedValue := fmt.Sprintf("%q", v)
+			envList = append(envList, fmt.Sprintf("%s=%s", k, escapedValue))
+		}
+	}
+	if len(envList) > 0 {
+		cmd = strings.Join(envList, " ") + ";" + cmd
+	}
+
+	exitCode := 0
+	err = session.Run(cmd)
+	if err != nil {
+		exitCode = -1
+		if exitErr, ok := err.(*ssh.ExitError); ok {
+			exitCode = exitErr.ExitStatus()
 		}
 	}
 
-	// TODO: test packing env variables in front of the command
-	err = session.Run(cmd)
-
 	return &SshCommandResult{
-		Stdout: stdout.Bytes(),
-		Stderr: stderr.Bytes(),
-		Error:  err,
+		Stdout:   stdout.Bytes(),
+		Stderr:   stderr.Bytes(),
+		Error:    err,
+		ExitCode: exitCode,
 	}
 }
 
@@ -168,7 +166,8 @@ func RunPipedSshCommand(client *ssh.Client, cmd string, env *map[string]string) 
 	session, err := client.NewSession()
 	if err != nil {
 		return &SshCommandResult{
-			Error: err,
+			Error:    err,
+			ExitCode: -1,
 		}
 	}
 	defer session.Close()
@@ -185,9 +184,18 @@ func RunPipedSshCommand(client *ssh.Client, cmd string, env *map[string]string) 
 	if len(envList) > 0 {
 		cmd = strings.Join(envList, " ") + ";" + cmd
 	}
+	exitCode := 0
+
 	err = session.Run(cmd)
+	if err != nil {
+		exitCode = -1
+		if exitErr, ok := err.(*ssh.ExitError); ok {
+			exitCode = exitErr.ExitStatus()
+		}
+	}
 	return &SshCommandResult{
-		Error: err,
+		Error:    err,
+		ExitCode: exitCode,
 	}
 }
 

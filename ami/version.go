@@ -106,7 +106,7 @@ func GetVersions(workingDir string, options *CollectVersionsOptions, remotePostP
 		var output string
 		session, err := locator.OpenAppRemoteSessionS()
 		if err == nil {
-			output, _, err = session.ProxyToRemoteAppGetOutput(locator.ElevationCredentials.ToEnvMap())
+			output, _, err = session.ProxyToRemoteAppGetOutput()
 		}
 
 		var result *InstanceVersions
