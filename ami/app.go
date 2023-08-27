@@ -46,6 +46,14 @@ func RemoveApp(app string, all bool, args ...string) (int, error) {
 }
 
 func IsAppInstalled(app string) bool {
+	if isRemote, locator := IsRemoteApp(app); isRemote {
+		session, err := locator.OpenAppRemoteSessionS()
+		if err == nil {
+			output, exitCode, err := session.IsRemoteModuleInstalled(app)
+			return err == nil && exitCode == 0 && strings.Contains(string(output), "true")
+		}
+		return false
+	}
 	output, exitCode, err := ExecuteGetOutput(app, "--is-app-installed")
 	return err == nil && exitCode == 0 && strings.Contains(output, "true")
 }

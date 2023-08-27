@@ -121,6 +121,17 @@ func OpenSshSession(connectionDetails *SshConnectionDetails, mode string, privat
 	return sshClient, sftp
 }
 
+func buildUpEnv(env *map[string]string) string {
+	result := ""
+	if env != nil {
+		for k, v := range *env {
+			escapedValue := fmt.Sprintf("%q", v)
+			result += fmt.Sprintf("export %s=%s;", k, escapedValue)
+		}
+	}
+	return result
+}
+
 func RunSshCommand(client *ssh.Client, cmd string, env *map[string]string) *SshCommandResult {
 	var stdout, stderr bytes.Buffer
 	session, err := client.NewSession()
@@ -134,16 +145,7 @@ func RunSshCommand(client *ssh.Client, cmd string, env *map[string]string) *SshC
 	session.Stdout = &stdout
 	session.Stderr = &stderr
 
-	envList := make([]string, 0)
-	if env != nil {
-		for k, v := range *env {
-			escapedValue := fmt.Sprintf("%q", v)
-			envList = append(envList, fmt.Sprintf("%s=%s", k, escapedValue))
-		}
-	}
-	if len(envList) > 0 {
-		cmd = strings.Join(envList, " ") + ";" + cmd
-	}
+	cmd = buildUpEnv(env) + cmd
 
 	exitCode := 0
 	err = session.Run(cmd)
@@ -174,16 +176,8 @@ func RunPipedSshCommand(client *ssh.Client, cmd string, env *map[string]string) 
 	session.Stdout = os.Stdout
 	session.Stderr = os.Stderr
 
-	envList := make([]string, 0)
-	if env != nil {
-		for k, v := range *env {
-			escapedValue := fmt.Sprintf("%q", v)
-			envList = append(envList, fmt.Sprintf("%s=%s", k, escapedValue))
-		}
-	}
-	if len(envList) > 0 {
-		cmd = strings.Join(envList, " ") + ";" + cmd
-	}
+	cmd = buildUpEnv(env) + cmd
+
 	exitCode := 0
 
 	err = session.Run(cmd)

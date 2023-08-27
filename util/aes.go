@@ -7,8 +7,13 @@ import (
 	"crypto/rand"
 	"errors"
 	"io"
+	"strings"
 
 	"golang.org/x/crypto/argon2"
+)
+
+const (
+	AES_DATA_PREFIX = "bake-buddy"
 )
 
 func PrepareAESKey(password, salt string) []byte {
@@ -22,6 +27,7 @@ func PrepareAESKey(password, salt string) []byte {
 }
 
 func pad(data []byte) []byte {
+	data = append([]byte(AES_DATA_PREFIX), data...)
 	blockSize := aes.BlockSize
 	padding := blockSize - len(data)%blockSize
 	if padding == 0 {
@@ -30,10 +36,13 @@ func pad(data []byte) []byte {
 	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
 	return append(data, padtext...)
 }
-func unpad(data []byte) []byte {
+func unpad(data []byte) ([]byte, error) {
 	length := len(data)
 	unpadding := int(data[length-1])
-	return data[:(length - unpadding)]
+	if !strings.HasPrefix(string(data), AES_DATA_PREFIX) {
+		return nil, errors.New("failed to decrypt data")
+	}
+	return data[len(AES_DATA_PREFIX):(length - unpadding)], nil
 }
 
 func DecryptAES(key, ciphertext []byte) ([]byte, error) {
@@ -50,7 +59,7 @@ func DecryptAES(key, ciphertext []byte) ([]byte, error) {
 
 	mode := cipher.NewCBCDecrypter(block, iv)
 	mode.CryptBlocks(ciphertext, ciphertext)
-	return unpad(ciphertext), nil
+	return unpad(ciphertext)
 }
 
 func EncryptAES(key, data []byte) ([]byte, error) {

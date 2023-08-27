@@ -4,7 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
-	"strings"
+	"time"
 
 	"alis.is/bb-cli/cli"
 	"alis.is/bb-cli/util"
@@ -32,11 +32,37 @@ func RequireElevatedUser(injectArgs ...string) {
 	}
 
 	// try elevate
-	sudoPass := os.Getenv("SUDO_PASS")
-	suUser := os.Getenv("SU_USER")
-	suPass := os.Getenv("SU_PASS")
-	if strings.Trim(sudoPass, " ") != "" {
-		// sudo
+	elevationKind := os.Getenv("ELEVATION_KIND")
+	// elevationUser := os.Getenv("ELEVATION_USER")
+	elevationPass := os.Getenv("ELEVATION_PASSWORD")
+	switch elevationKind {
+	case "sudo":
+		// test with exit 0
+		testArgs := make([]string, 0)
+		testArgs = append(testArgs, "-S", "-E", "--")
+		testArgs = append(testArgs, "sh", "-c", "exit 0")
+		testProc := exec.Command("sudo", testArgs...)
+		testSuccess := false
+		done := make(chan error, 1)
+		go func() {
+			testProc.Stdout = os.Stdout
+			testProc.Stderr = os.Stderr
+			testStdin, err := testProc.StdinPipe()
+			util.AssertEE(err, "Failed to access sudo stdin!", cli.ExitElevationRequired)
+			testStdin.Write([]byte(elevationPass + "\n"))
+			done <- testProc.Run()
+		}()
+
+		select {
+		case <-time.After(3 * time.Second):
+			log.Warn("Timeout occurred while testing sudo access")
+		case err := <-done:
+			util.AssertEE(err, "Failed to execute test sudo!", cli.ExitExternalError)
+			testSuccess = true
+		}
+
+		util.AssertBE(testSuccess, "Sudo access test failed!", cli.ExitElevationRequired)
+
 		sudoArgs := make([]string, 0)
 		sudoArgs = append(sudoArgs, "-S", "-E", "--")
 		sudoArgs = append(sudoArgs, os.Args...)
@@ -46,18 +72,14 @@ func RequireElevatedUser(injectArgs ...string) {
 		sudoProc.Stderr = os.Stderr
 		sudoStdin, err := sudoProc.StdinPipe()
 		util.AssertEE(err, "Failed to access sudo stdin!", cli.ExitElevationRequired)
-		sudoStdin.Write([]byte(os.Getenv("SUDO_PASS") + "\n"))
+		sudoStdin.Write([]byte(elevationPass + "\n"))
 		err = sudoProc.Run()
 		util.AssertEE(err, "Failed to execute sudo!", cli.ExitExternalError)
 
 		os.Exit(sudoProc.ProcessState.ExitCode())
-	}
-
-	if strings.Trim(suUser, " ") != "" && strings.Trim(suPass, " ") != "" {
-		// su
+	case "su":
 		os.Exit(cli.ExitNotSupported)
 	}
-
 	// other options?
 	util.AssertBE(IsTty(), "No self elevation method available!", cli.ExitElevationRequired)
 	_, err := exec.LookPath("sudo")

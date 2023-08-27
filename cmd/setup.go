@@ -85,16 +85,6 @@ var setupCmd = &cobra.Command{
 			}
 		}
 
-		var remoteElevatePassword string
-		remoteElevate := util.GetCommandStringFlagS(cmd, RemoteElevate)
-		if remoteElevate != "" {
-			prompt := &survey.Password{
-				Message: "Enter password to use for elevation on remote:",
-			}
-			err := survey.AskOne(prompt, &remoteElevatePassword)
-			util.AssertE(err, "Remote elevate requires password!")
-		}
-
 		for _, v := range bb.Modules {
 			moduleId := v.GetId()
 			if cli.IsRemoteInstance && !v.SupportsRemote() {
@@ -120,9 +110,9 @@ var setupCmd = &cobra.Command{
 					RemoteUser:  util.GetCommandStringFlagS(cmd, RemoteUser),
 					RemoteReset: util.GetCommandBoolFlagS(cmd, RemoteReset),
 
-					RemoteElevate:         ami.ERemoteElevationKind(remoteElevate),
-					RemoteElevateUser:     util.GetCommandStringFlagS(cmd, RemoteElevateUser),
-					RemoteElevatePassword: remoteElevatePassword,
+					RemoteElevate:     ami.ERemoteElevationKind(util.GetCommandStringFlagS(cmd, RemoteElevate)),
+					RemoteElevateUser: util.GetCommandStringFlagS(cmd, RemoteElevateUser),
+					//RemoteElevatePassword: remoteElevatePassword,
 
 					Force: force,
 				}

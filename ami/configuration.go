@@ -1,14 +1,17 @@
 package ami
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path"
 
 	"alis.is/bb-cli/cli"
 	"alis.is/bb-cli/system"
+	"golang.org/x/crypto/ssh"
 
 	"github.com/hjson/hjson-go"
 	"github.com/pkg/sftp"
@@ -99,13 +102,33 @@ func writeAppConfigurationToRemote(sftpClient *sftp.Client, workingDir string, c
 	return err
 }
 
+func prepareFolderStructure(sshClient *ssh.Client, workingDir string, user string, env *map[string]string) error {
+	log.Tracef("Preparing folder structure for remote %s...", workingDir)
+	encodedCmd := base64.StdEncoding.EncodeToString([]byte("mkdir -p " + workingDir))
+	result := system.RunSshCommand(sshClient, "bb-cli execute --elevate --base64 "+encodedCmd, env)
+	if result.Error != nil {
+		return result.Error
+	}
+	log.Tracef("Setting ownership for remote %s...", workingDir)
+	encodedCmd = base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("chown -R %s:%s ", user, user) + workingDir))
+	result = system.RunSshCommand(sshClient, "bb-cli execute --elevate --base64 "+encodedCmd, env)
+	return result.Error
+}
+
 func WriteAppDefinition(workingDir string, configuration map[string]interface{}, appConfigPath string) error {
 	if isRemote, locator := IsRemoteApp(workingDir); isRemote {
 		session, err := locator.OpenAppRemoteSessionS()
 		if err != nil {
 			return err
 		}
-		system.RunSshCommand(session.sshClient, "mkdir -p "+path.Join(locator.InstancePath, locator.App), locator.GetElevationCredentials())
+		credentials, err := locator.GetElevationCredentials()
+		if err != nil {
+			return err
+		}
+		err = prepareFolderStructure(session.sshClient, path.Join(locator.InstancePath, locator.App), locator.Username, credentials.ToEnvMap())
+		if err != nil {
+			return err
+		}
 		return writeAppConfigurationToRemote(session.sftpSession, path.Join(locator.InstancePath, locator.App), configuration)
 	}
 	var appDef []byte
