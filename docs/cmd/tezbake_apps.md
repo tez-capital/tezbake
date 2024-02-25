@@ -1,23 +1,19 @@
-docs/cmd/tezbake_remove.md## tezbake remove
+docs/cmd/tezbake_apps.md## tezbake apps
 
-Removes BB.
+Prints BB CLI apps.
 
 ### Synopsis
 
-Removes BB instance.
+Prints BakeBuddy CLI apps.
 
 ```
-tezbake remove [flags]
+tezbake apps [flags]
 ```
 
 ### Options
 
 ```
-  -a, --all      Removes all files related to BB instance.
-  -h, --help     help for remove
-      --node     Removes node.
-      --peak     Removes peak.
-      --signer   Removes signer.
+  -h, --help   help for apps
 ```
 
 ### Options inherited from parent commands

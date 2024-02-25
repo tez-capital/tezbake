@@ -1,23 +1,19 @@
-docs/cmd/tezbake_remove.md## tezbake remove
+docs/cmd/tezbake_peak.md## tezbake peak
 
-Removes BB.
+Passes args through to peak app.
 
 ### Synopsis
 
-Removes BB instance.
+Passes args through to peak app.
 
 ```
-tezbake remove [flags]
+tezbake peak [flags]
 ```
 
 ### Options
 
 ```
-  -a, --all      Removes all files related to BB instance.
-  -h, --help     help for remove
-      --node     Removes node.
-      --peak     Removes peak.
-      --signer   Removes signer.
+  -h, --help   help for peak
 ```
 
 ### Options inherited from parent commands
