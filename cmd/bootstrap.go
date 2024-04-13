@@ -41,7 +41,7 @@ var bootstrapNodeCmd = &cobra.Command{
 	Args:      cobra.MinimumNArgs(0),
 	ValidArgs: []string{"url", "block hash"},
 	Run: func(cmd *cobra.Command, args []string) {
-		//disableSnapshotCheck, _ := cmd.Flags().GetBool("no-check")
+		disableSnapshotCheck, _ := cmd.Flags().GetBool("no-check")
 
 		var chosenSnapshot *snapshot = nil
 		//artifactKind := TezosSnapshot
@@ -126,7 +126,9 @@ var bootstrapNodeCmd = &cobra.Command{
 		} else {
 			bootstrapArgs = append(bootstrapArgs, args...)
 		}
-
+		if disableSnapshotCheck {
+			bootstrapArgs = append(bootstrapArgs, "--no-check")
+		}
 		exitCode, err := apps.Node.Execute(bootstrapArgs...)
 		util.AssertEE(err, "Failed to bootstrap tezos node", exitCode)
 
