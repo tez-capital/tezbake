@@ -1,0 +1,16 @@
+FROM ghcr.io/alis-is/ascend:latest-ubuntu-ami
+
+RUN apt-get update && apt-get install -y udev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY bootstrap /bootstrap
+
+ENV ASCEND_APPS=/bake-buddy/
+ENV APPS_BOOTSTRAP=/bootstrap
+
+RUN mkdir -p /bake-buddy
+
+RUN wget -q https://github.com/tez-capital/tezbake/raw/main/install.sh -O /tmp/install.sh && sh /tmp/install.sh
+
+RUN useradd -r -s /bin/false ascend

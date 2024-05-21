@@ -1,0 +1,8 @@
+{
+    id: bb-default-node
+    type: xtz.node
+    configuration: {
+        NODE_TYPE: baker
+    }
+    user: ascend
+}
