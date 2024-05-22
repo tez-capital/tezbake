@@ -42,7 +42,7 @@ jobs:
     - name: Build and publish alpine container
       uses: docker/build-push-action@v4
       with:
-        file: ./containers/ubuntu/Containerfile
+        file: ./containers/alpine/Containerfile
         context: ./containers/alpine
         platforms: linux/amd64,linux/arm64
         build-args: GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
