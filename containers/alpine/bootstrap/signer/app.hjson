@@ -1,0 +1,6 @@
+{
+    id: bb-default-signer
+    type: xtz.signer
+    configuration: {}
+    user: ascend
+}

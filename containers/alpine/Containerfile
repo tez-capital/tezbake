@@ -1,4 +1,4 @@
-FROM ghcr.io/alis-is/ascend:latest-ubuntu-ami
+FROM ghcr.io/alis-is/ascend:latest-alpine-ami
 
 COPY bootstrap /bootstrap
 
