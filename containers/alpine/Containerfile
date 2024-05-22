@@ -9,4 +9,5 @@ RUN mkdir -p /bake-buddy
 
 RUN wget -q https://github.com/tez-capital/tezbake/raw/main/install.sh -O /tmp/install.sh && sh /tmp/install.sh
 
-RUN useradd -r -s /bin/false ascend
+RUN apk add --no-cache shadow && \
+	useradd -r -s /bin/false ascend
