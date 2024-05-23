@@ -69,14 +69,25 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Build and publish alpine container
+      - name: Build and publish ubuntu container
         uses: docker/build-push-action@v4
         with:
           file: ./containers/ubuntu/Containerfile
           context: ./containers/ubuntu
           platforms: linux/amd64,linux/arm64
           build-args: GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-          tags: ghcr.io/tez-capital/tezbake:latest,ghcr.io/tez-capital/tezbake:latest-ubuntu,ghcr.io/tez-capital/tezbake:${{ github.ref_name }}-ubuntu
+          tags: ghcr.io/tez-capital/tezbake:${{ github.event.inputs.version }}-ubuntu,ghcr.io/tez-capital/tezbake:latest-ubuntu,ghcr.io/tez-capital/tezbake:latest
+          push: true
+          provenance: false
+  
+      - name: Build and publish alpine container
+        uses: docker/build-push-action@v4
+        with:
+          file: ./containers/alpine/Containerfile
+          context: ./containers/alpine
+          platforms: linux/amd64,linux/arm64
+          build-args: GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          tags: ghcr.io/tez-capital/tezbake:${{ github.event.inputs.version }}-alpine,ghcr.io/tez-capital/tezbake:latest-alpine
           push: true
           provenance: false
 

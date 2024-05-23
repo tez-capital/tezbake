@@ -28,7 +28,7 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
 
-    - name: Build and publish alpine container
+    - name: Build and publish ubuntu container
       uses: docker/build-push-action@v4
       with:
         file: ./containers/ubuntu/Containerfile
