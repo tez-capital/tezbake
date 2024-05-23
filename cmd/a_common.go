@@ -117,3 +117,45 @@ func GetAppsBySelectionCriteria(cmd *cobra.Command, criteria AppSelectionCriteri
 	}
 	return selectedApps
 }
+
+type BoolStringCombinedFlag struct {
+	valueB bool
+	valueS string
+}
+
+// String is required for pflag.Value interface.
+func (i *BoolStringCombinedFlag) String() string {
+	return i.valueS
+}
+
+// Set is required for pflag.Value interface.
+func (i *BoolStringCombinedFlag) Set(value string) error {
+	i.valueS = value
+	i.valueB = value != "" && value != "false"
+	return nil
+}
+
+func (i *BoolStringCombinedFlag) IsBoolFlag() bool { return true }
+
+func (i *BoolStringCombinedFlag) Type() string {
+	return "[string]"
+}
+
+func (i *BoolStringCombinedFlag) IsTrue() bool {
+	return i.valueB
+}
+
+func (i *BoolStringCombinedFlag) HasValue() bool {
+	return i.valueS != "" && i.valueS != "false" && i.valueS != "true"
+}
+
+func (i *BoolStringCombinedFlag) Value() string {
+	return i.valueS
+}
+
+func addCombinedFlag(cmd *cobra.Command, name string, value string, usage string) *BoolStringCombinedFlag {
+	flag := &BoolStringCombinedFlag{valueS: value}
+	f := cmd.Flags().VarPF(flag, name, "", usage)
+	f.NoOptDefVal = "true"
+	return flag
+}
