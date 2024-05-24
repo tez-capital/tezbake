@@ -25,9 +25,7 @@ var setupLedgerCmd = &cobra.Command{
 	Short: "Setup ledger for baking.",
 	Long:  "Setups ledger for baking.",
 	Run: func(cmd *cobra.Command, args []string) {
-		if platform.IsTrue() {
-			system.RequireElevatedUser()
-		}
+		system.RequireElevatedUser()
 
 		shouldOperateOnSigner, _ := cmd.Flags().GetBool("signer")
 		shouldOperateOnNode, _ := cmd.Flags().GetBool("node")
