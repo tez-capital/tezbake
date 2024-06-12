@@ -48,3 +48,7 @@ func SignerFromPath(path string) *signer.Signer {
 func PeakFromPath(path string) *peak.Peak {
 	return peak.FromPath(path)
 }
+
+func TezpayFromPath(path string) *pay.Tezpay {
+	return pay.FromPath(path)
+}
