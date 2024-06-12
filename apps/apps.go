@@ -3,6 +3,7 @@ package apps
 import (
 	"github.com/tez-capital/tezbake/apps/base"
 	"github.com/tez-capital/tezbake/apps/node"
+	"github.com/tez-capital/tezbake/apps/pay"
 	"github.com/tez-capital/tezbake/apps/peak"
 	"github.com/tez-capital/tezbake/apps/signer"
 )
@@ -11,8 +12,9 @@ var (
 	Node   = node.FromPath("")
 	Signer = signer.FromPath("")
 	Peak   = peak.FromPath("")
+	Pay    = pay.FromPath("")
 	All    = []base.BakeBuddyApp{
-		Node, Signer, Peak,
+		Node, Signer, Peak, Pay,
 	}
 	Implicit = []base.BakeBuddyApp{
 		Node, Signer,
