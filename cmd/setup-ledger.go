@@ -31,6 +31,7 @@ var setupLedgerCmd = &cobra.Command{
 		shouldOperateOnNode, _ := cmd.Flags().GetBool("node")
 		force, _ := cmd.Flags().GetBool("force")
 		keyAlias, _ := cmd.Flags().GetString("key-alias")
+		protocol, _ := cmd.Flags().GetString("protocol")
 
 		if (shouldOperateOnSigner || !shouldOperateOnNode) && !cli.IsRemoteInstance && apps.Signer.IsInstalled() {
 			log.Info("setting up ledger for signer...")
@@ -50,6 +51,10 @@ var setupLedgerCmd = &cobra.Command{
 			noUdev, _ := cmd.Flags().GetString("no-udev")
 			if noUdev != "" {
 				amiArgs = append(amiArgs, "--no-udev")
+			}
+
+			if protocol == "" {
+				amiArgs = append(amiArgs, fmt.Sprintf("--protocol=%s", protocol))
 			}
 
 			if importKey.HasValue() {
@@ -148,6 +153,8 @@ func init() {
 	setupLedgerCmd.Flags().Bool("authorize", false, "Authorize ledger for baking.")
 	setupLedgerCmd.Flags().String("chain-id", "", "Id of chain to be used for baking.")
 	setupLedgerCmd.Flags().String("hwm", "", "High watermark to be used during baking.")
+
+	setupLedgerCmd.Flags().String("protocol", "", "Protocol hash to be used during setup-ledger.")
 
 	platform = addCombinedFlag(setupLedgerCmd, "platform", "", "Prepare platform for ledger (optionally specify platform to override)")
 	setupLedgerCmd.Flags().String("no-udev", "", "Skip udev rules installation. (linux only)")
