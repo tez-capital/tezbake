@@ -79,7 +79,7 @@ var setupLedgerCmd = &cobra.Command{
 				amiArgs = append(amiArgs, "--chain-id="+chainId)
 			}
 
-			hwm, _ := cmd.Flags().GetString("main-hwm")
+			hwm, _ := cmd.Flags().GetString("hwm")
 			if hwm != "" {
 				amiArgs = append(amiArgs, "--hwm="+hwm)
 			}
