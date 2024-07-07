@@ -65,6 +65,7 @@ func Execute(workingDir string, args ...string) (int, error) {
 	eliProc := exec.Command(eliPath, eliArgs...)
 	eliProc.Stdout = os.Stdout
 	eliProc.Stderr = os.Stderr
+	eliProc.Stdin = os.Stdin
 	err = eliProc.Run()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
