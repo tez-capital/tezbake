@@ -21,3 +21,7 @@ func (app *Tezpay) Execute(args ...string) (int, error) {
 func (app *Tezpay) ExecuteGetOutput(args ...string) (string, int, error) {
 	return ami.ExecuteGetOutput(app.GetPath(), args...)
 }
+
+func (app *Tezpay) ExecuteWithOutputChannel(outputChannel chan<- string, args ...string) (int, error) {
+	return ami.ExecuteWithOutputChannel(app.GetPath(), outputChannel, args...)
+}
