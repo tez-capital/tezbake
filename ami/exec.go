@@ -36,7 +36,7 @@ func ExecuteRaw(args ...string) (int, error) {
 	return 0, nil
 }
 
-func Execute(workingDir string, args ...string) (int, error) {
+func Execute(workingDir string, args ...string) (exitCode int, err error) {
 	if isRemote, locator := IsRemoteApp(workingDir); isRemote {
 		session, err := locator.OpenAppRemoteSession()
 		if err != nil {
@@ -76,7 +76,7 @@ func Execute(workingDir string, args ...string) (int, error) {
 	return 0, nil
 }
 
-func ExecuteGetOutput(workingDir string, args ...string) (string, int, error) {
+func ExecuteGetOutput(workingDir string, args ...string) (output string, exitCode int, err error) {
 	if isRemote, locator := IsRemoteApp(workingDir); isRemote {
 		session, err := locator.OpenAppRemoteSession()
 		if err != nil {
@@ -102,14 +102,14 @@ func ExecuteGetOutput(workingDir string, args ...string) (string, int, error) {
 	eliArgs = append(eliArgs, "--path="+workingDir)
 	eliArgs = append(eliArgs, args...)
 	log.Trace("Executing: " + eliPath + " " + strings.Join(eliArgs, " "))
-	output, err := exec.Command(eliPath, eliArgs...).CombinedOutput()
+	outputBytes, err := exec.Command(eliPath, eliArgs...).CombinedOutput()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			return string(output), exitError.ExitCode(), err
 		}
 		return string(output), -1, err
 	}
-	return string(output), 0, nil
+	return string(outputBytes), 0, nil
 }
 
 func ExecuteInfo(workingDir string, args ...string) ([]byte, int, error) {
