@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -118,11 +119,22 @@ func ExecuteWithOutputChannel(workingDir string, outputChannel chan<- string, ar
 
 func ExecuteGetOutput(workingDir string, args ...string) (output string, exitCode int, err error) {
 	outputChannel := make(chan string)
-	exitCode, err = executeInternal(workingDir, outputChannel, args...)
+	var wg sync.WaitGroup
 	output = ""
-	for line := range outputChannel {
-		output += line + "\n"
-	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for line := range outputChannel {
+			output += line + "\n"
+		}
+	}()
+
+	exitCode, err = executeInternal(workingDir, outputChannel, args...)
+	close(outputChannel) // Close the channel to signal the goroutine to finish
+
+	// Wait for the goroutine to finish
+	wg.Wait()
 	return
 }
 
