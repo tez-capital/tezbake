@@ -94,7 +94,6 @@ func executeInternal(workingDir string, outputChannel chan<- string, args ...str
 				outputChannel <- scanner.Text()
 			}
 		}()
-		defer close(outputChannel)
 	}
 
 	eliProc.Stdin = os.Stdin
