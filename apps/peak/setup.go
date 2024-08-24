@@ -21,6 +21,8 @@ func (app *Peak) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 		log.Warn(err)
 	}
 
+	_, _ = app.Execute("autodetect-configuration") // we ignore the error here, user can always run autodetect-configuration manually
+
 	oldAppDef, err := ami.ReadAppDefinition(app.GetPath(), constants.DefaultAppJsonName)
 	if oldAppDef != nil && err == nil {
 		if oldConfiguration, ok := (*oldAppDef)["configuration"].(map[string]interface{}); ok {
