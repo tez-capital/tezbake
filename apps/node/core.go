@@ -50,6 +50,18 @@ func (app *Node) GetId() string {
 	return strings.ToLower(constants.NodeAppId)
 }
 
+func (app *Node) GetUser() string {
+	def, _, err := base.LoadAppDefinition(app)
+	if err != nil {
+		log.Warnf("Failed to load %s definition (%s)!", app.GetId(), err.Error())
+		return ""
+	}
+	if user, ok := def["user"].(string); ok {
+		return user
+	}
+	return ""
+}
+
 func (app *Node) GetLabel() string {
 	if isRemote, locator := ami.IsRemoteApp(app.GetPath()); isRemote {
 		return strings.ToUpper(fmt.Sprintf("%s (REMOTE - %s:%s)", app.GetId(), locator.Host, locator.Port))

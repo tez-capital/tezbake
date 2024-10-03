@@ -15,6 +15,14 @@ type IAmiBasedApp interface {
 	GetPath() string
 }
 
+func GetUser(app IAmiBasedApp) string {
+	def, _, err := LoadAppDefinition(app)
+	if err != nil {
+		return ""
+	}
+	return def["user"].(string)
+}
+
 func LoadAppDefinition(app IAmiBasedApp) (map[string]interface{}, string, error) {
 	def, path, err := ami.FindAppDefinition(app.GetPath())
 	if err != nil {
@@ -28,7 +36,10 @@ func LoadAppConfiguration(app IAmiBasedApp) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load '%s' configuration (%s)", app.GetPath(), err.Error())
 	}
-	return def, nil
+	if config, ok := def["configuration"].(map[string]interface{}); ok {
+		return config, nil
+	}
+	return nil, fmt.Errorf("failed to load '%s' configuration - unexpected format", app.GetPath())
 }
 
 type BakeBuddyAppDefinition struct {

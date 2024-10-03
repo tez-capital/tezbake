@@ -1,9 +1,12 @@
 package node
 
 import (
+	"path"
+
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps/base"
 	"github.com/tez-capital/tezbake/system"
+	"github.com/tez-capital/tezbake/util"
 )
 
 func (app *Node) UpgradeStorage() (int, error) {
@@ -13,6 +16,7 @@ func (app *Node) UpgradeStorage() (int, error) {
 	if err != nil {
 		return exitCode, err
 	}
+
 	return 0, nil
 }
 
@@ -37,6 +41,12 @@ func (app *Node) Upgrade(ctx *base.UpgradeContext, args ...string) (int, error) 
 		exitCode, err = app.UpgradeStorage()
 		if err != nil {
 			return exitCode, err
+		}
+	}
+	if !isRemote {
+		user := app.GetUser()
+		if user != "" && user != "root" {
+			util.ChownR(user, path.Join(app.GetPath()))
 		}
 	}
 

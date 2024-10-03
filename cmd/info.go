@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/tez-capital/tezbake/apps"
 	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
@@ -42,6 +43,7 @@ var infoCmd = &cobra.Command{
 				}
 			}
 
+			log.Debugf("Collecting info for %s", v.GetId())
 			optionsJson, _ := json.Marshal(options)
 			if cli.JsonLogFormat || cli.IsRemoteInstance {
 				result[v.GetId()], _ = v.GetInfo(optionsJson)

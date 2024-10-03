@@ -73,7 +73,10 @@ func LoadAppConfiguration(app string) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return appDef["configuration"].(map[string]interface{}), nil
+	if config, ok := appDef["configuration"].(map[string]interface{}); ok {
+		return config, nil
+	}
+	return nil, fmt.Errorf("failed to load '%s' configuration - unexpected format", app)
 }
 
 func writeAppConfigurationToRemote(sftpClient *sftp.Client, workingDir string, configuration map[string]interface{}) error {
