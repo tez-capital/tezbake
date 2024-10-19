@@ -27,9 +27,9 @@ tezbake info [flags]
       --peak              Prints info for peak.
       --peak-services     
       --signer            Prints info for signer.
-      --signer-baking     
       --signer-services   
       --signer-simple     
+      --signer-wallets    
       --timeout int       How long to wait for collecting info. (default 5)
 ```
 
