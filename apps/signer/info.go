@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"sort"
 	"strings"
 
+	"github.com/samber/lo"
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps/base"
 
@@ -16,9 +18,10 @@ import (
 
 type InfoCollectionOptions struct {
 	//Timeout  int
-	Baking   bool
+	Wallets  bool
 	Simple   bool
 	Services bool
+	// Sensitive bool // Not needed for now
 }
 
 func (infoCollectionOptions *InfoCollectionOptions) toAmiArgs() []string {
@@ -27,8 +30,8 @@ func (infoCollectionOptions *InfoCollectionOptions) toAmiArgs() []string {
 	// 	args = append(args, fmt.Sprintf("--timeout=%d", infoCollectionOptions.Timeout))
 	// }
 
-	if infoCollectionOptions.Baking {
-		args = append(args, "--baking")
+	if infoCollectionOptions.Wallets {
+		args = append(args, "--wallets")
 	}
 	if infoCollectionOptions.Simple {
 		args = append(args, "--simple")
@@ -36,11 +39,14 @@ func (infoCollectionOptions *InfoCollectionOptions) toAmiArgs() []string {
 	if infoCollectionOptions.Services {
 		args = append(args, "--services")
 	}
+	// if infoCollectionOptions.Sensitive {
+	// 	args = append(args, "--sensitive")
+	// }
 	return args
 }
 
 func (sico *InfoCollectionOptions) All() bool {
-	return !sico.Baking && !sico.Simple && !sico.Services
+	return !sico.Wallets && !sico.Simple && !sico.Services
 }
 
 func (app *Signer) getInfoCollectionOptions(optionsJson []byte) *InfoCollectionOptions {
@@ -115,15 +121,37 @@ func (app *Signer) PrintInfo(optionsJson []byte) error {
 	signerTable.AppendRow(table.Row{"Status", fmt.Sprint(signerInfo["status"])})
 	signerTable.AppendRow(table.Row{"Status Level", fmt.Sprint(signerInfo["level"])})
 
-	if infoCollectionOptions.All() || infoCollectionOptions.Simple || infoCollectionOptions.Baking {
+	if infoCollectionOptions.All() || infoCollectionOptions.Simple || infoCollectionOptions.Wallets {
 		// Baker Info
 		signerTable.AppendSeparator()
-		signerTable.AppendRow(table.Row{"Baking", "Baking"}, table.RowConfig{AutoMerge: true})
+		signerTable.AppendRow(table.Row{"Wallets", "Wallets"}, table.RowConfig{AutoMerge: true})
 		signerTable.AppendSeparator()
-		signerTable.AppendRow(table.Row{"Ledger Id", fmt.Sprint(signerInfo["ledger_id"])})
-		signerTable.AppendRow(table.Row{"Baking App", fmt.Sprint(signerInfo["baking_app"])})
-		signerTable.AppendRow(table.Row{"Baking App Status", fmt.Sprint(signerInfo["baking_app_status"])})
-		signerTable.AppendRow(table.Row{"Baker Address", fmt.Sprint(signerInfo["baker_address"])})
+		if wallets, ok := signerInfo["wallets"].(map[string]interface{}); ok {
+			wallet_ids := lo.Keys(wallets)
+			sort.Strings(wallet_ids)
+			for _, k := range wallet_ids {
+				v := wallets[k]
+				if properties, ok := v.(map[string]interface{}); ok {
+					kind := fmt.Sprint(properties["kind"])
+					switch kind {
+					case "ledger":
+						status := "error"
+						if properties["ledger_status"] == "connected" && properties["authorized"] == true {
+							status = "ok"
+						}
+						signerTable.AppendRow(table.Row{k, fmt.Sprintf("%v (%v) - %v", kind, properties["pkh"], status)})
+					case "soft":
+						signerTable.AppendRow(table.Row{k, fmt.Sprintf("⚠️ %v ⚠️ (%v)", kind, properties["pkh"])})
+					case "remote":
+						signerTable.AppendRow(table.Row{k, fmt.Sprintf("%v (%v)", kind, properties["pkh"])})
+					}
+				} else {
+					signerTable.AppendRow(table.Row{k, "unknown data format"})
+				}
+			}
+		} else {
+			signerTable.AppendRow(table.Row{"N/A", "N/A"})
+		}
 	}
 
 	if infoCollectionOptions.All() || infoCollectionOptions.Services {
