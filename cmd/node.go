@@ -9,9 +9,10 @@ import (
 )
 
 var nodeCmd = &cobra.Command{
-	Use:   "node",
-	Short: "Passes args through to node app.",
-	Long:  `Passes args through to node app.`,
+	Use:                "node",
+	Short:              "Passes args through to node app.",
+	Long:               `Passes args through to node app.`,
+	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) > 0 && args[0] == "-" {
 			args[0] = "node"

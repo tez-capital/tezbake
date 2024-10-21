@@ -9,9 +9,10 @@ import (
 )
 
 var signerCmd = &cobra.Command{
-	Use:   "signer",
-	Short: "Passes args through to signer app.",
-	Long:  `Passes args through to signer app.`,
+	Use:                "signer",
+	Short:              "Passes args through to signer app.",
+	Long:               `Passes args through to signer app.`,
+	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) > 0 && args[0] == "-" {
 			args[0] = "signer"
@@ -23,5 +24,6 @@ var signerCmd = &cobra.Command{
 
 func init() {
 	signerCmd.Flags().SetInterspersed(false)
+
 	RootCmd.AddCommand(signerCmd)
 }
