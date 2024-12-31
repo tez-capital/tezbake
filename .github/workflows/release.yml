@@ -77,7 +77,7 @@ jobs:
           context: ./containers/ubuntu
           platforms: linux/amd64,linux/arm64
           build-args: GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-          tags: ghcr.io/tez-capital/tezbake:${{ github.ref }}-ubuntu,ghcr.io/tez-capital/tezbake:latest-ubuntu,ghcr.io/tez-capital/tezbake:latest
+          tags: ghcr.io/tez-capital/tezbake:${{ github.ref_name }}-ubuntu,ghcr.io/tez-capital/tezbake:latest-ubuntu,ghcr.io/tez-capital/tezbake:latest
           push: true
           provenance: false
   
@@ -88,7 +88,7 @@ jobs:
           context: ./containers/alpine
           platforms: linux/amd64,linux/arm64
           build-args: GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-          tags: ghcr.io/tez-capital/tezbake:${{ github.ref }}-alpine,ghcr.io/tez-capital/tezbake:latest-alpine
+          tags: ghcr.io/tez-capital/tezbake:${{ github.ref_name }}-alpine,ghcr.io/tez-capital/tezbake:latest-alpine
           push: true
           provenance: false
 
