@@ -66,6 +66,8 @@ func executeInternal(workingDir string, outputChannel chan<- string, args ...str
 	log.Trace("Executing: " + eliPath + " " + strings.Join(eliArgs, " "))
 	eliProc := exec.Command(eliPath, eliArgs...)
 
+	var wg sync.WaitGroup
+
 	switch outputChannel {
 	case nil:
 		eliProc.Stdout = os.Stdout
@@ -79,7 +81,11 @@ func executeInternal(workingDir string, outputChannel chan<- string, args ...str
 		if err != nil {
 			return -1, err
 		}
+
+		// Increment the WaitGroup counter for each goroutine
+		wg.Add(2)
 		go func() {
+			defer wg.Done()
 			// feed the output channel with the output of the command
 			scanner := bufio.NewScanner(stdout)
 			for scanner.Scan() {
@@ -88,6 +94,7 @@ func executeInternal(workingDir string, outputChannel chan<- string, args ...str
 			}
 		}()
 		go func() {
+			defer wg.Done()
 			// feed the output channel with the output of the command
 			scanner := bufio.NewScanner(stderr)
 			for scanner.Scan() {
@@ -98,7 +105,12 @@ func executeInternal(workingDir string, outputChannel chan<- string, args ...str
 	}
 
 	eliProc.Stdin = os.Stdin
-	err = eliProc.Run()
+	err = eliProc.Start()
+	if err != nil {
+		return -1, err
+	}
+	wg.Wait()
+	err = eliProc.Wait()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			return exitError.ExitCode(), err
@@ -106,7 +118,6 @@ func executeInternal(workingDir string, outputChannel chan<- string, args ...str
 		return -1, err
 	}
 	return 0, nil
-
 }
 
 func Execute(workingDir string, args ...string) (exitCode int, err error) {
