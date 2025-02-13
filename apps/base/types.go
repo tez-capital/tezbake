@@ -42,6 +42,17 @@ type AmiServiceInfo struct {
 	Started string `json:"started"`
 }
 
+type AmiWalletInfo struct {
+	Authorized    bool   `json:"authorized,omitempty"`
+	BakingApp     string `json:"baking_app,omitempty"`
+	Device        string `json:"device,omitempty"`
+	DeviceAddress string `json:"device_address,omitempty"`
+	Kind          string `json:"kind,omitempty"`
+	Ledger        string `json:"ledger,omitempty"`
+	LedgerStatus  string `json:"ledger_status,omitempty"`
+	Pkh           string `json:"pkh,omitempty"`
+}
+
 type BBInstanceVersions struct {
 	Cli           string                `json:"cli"`
 	RemoteCli     string                `json:"remote-cli"`
