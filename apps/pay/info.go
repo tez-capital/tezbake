@@ -59,7 +59,7 @@ func (app *Tezpay) GetInfoFromOptions(options *InfoCollectionOptions) (map[strin
 		return base.GenerateFailedInfo(string(infoBytes), err), fmt.Errorf("failed to collect app info (%s)", err.Error())
 	}
 
-	return base.ParseInfoOutput(infoBytes)
+	return base.ParseInfoOutput[any](infoBytes)
 }
 
 func (app *Tezpay) GetInfo(optionsJson []byte) (map[string]interface{}, error) {

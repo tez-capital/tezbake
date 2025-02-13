@@ -74,7 +74,7 @@ func (app *Signer) GetInfoFromOptions(options *InfoCollectionOptions) (map[strin
 	if err != nil {
 		return base.GenerateFailedInfo(string(infoBytes), err), fmt.Errorf("failed to collect app info (%s)", err.Error())
 	}
-	return base.ParseInfoOutput(infoBytes)
+	return base.ParseInfoOutput[any](infoBytes)
 }
 
 func (app *Signer) GetInfo(optionsJson []byte) (map[string]interface{}, error) {

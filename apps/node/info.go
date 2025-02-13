@@ -74,7 +74,7 @@ func (app *Node) GetInfoFromOptions(options *InfoCollectionOptions) (map[string]
 		return base.GenerateFailedInfo(string(infoBytes), err), fmt.Errorf("failed to collect app info (%s)", err.Error())
 	}
 
-	info, err := base.ParseInfoOutput(infoBytes)
+	info, err := base.ParseInfoOutput[any](infoBytes)
 	info["isRemote"], _ = ami.IsRemoteApp(app.GetPath())
 	return info, err
 }

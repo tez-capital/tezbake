@@ -56,7 +56,7 @@ func (app *Peak) GetInfoFromOptions(options *InfoCollectionOptions) (map[string]
 	if err != nil {
 		return base.GenerateFailedInfo(string(infoBytes), err), fmt.Errorf("failed to collect app info (%s)", err.Error())
 	}
-	return base.ParseInfoOutput(infoBytes)
+	return base.ParseInfoOutput[any](infoBytes)
 }
 
 func (app *Peak) GetInfo(optionsJson []byte) (map[string]interface{}, error) {
