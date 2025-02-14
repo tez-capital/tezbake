@@ -15,12 +15,16 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 )
 
+type Info struct {
+	base.InfoBase
+	Services map[string]base.AmiServiceInfo `json:"services"`
+	Type     string                         `json:"type"`
+	Version  string                         `json:"version"`
+}
+
 type InfoCollectionOptions struct {
 	Timeout  int
-	Chain    bool
-	Simple   bool
 	Services bool
-	Voting   bool
 }
 
 func (infoCollectionOptions *InfoCollectionOptions) toAmiArgs() []string {
@@ -52,17 +56,24 @@ func (app *Tezpay) GetAvailableInfoCollectionOptions() []base.AmiInfoCollectionO
 	return result
 }
 
-func (app *Tezpay) GetInfoFromOptions(options *InfoCollectionOptions) (map[string]interface{}, error) {
+func (app *Tezpay) GetInfoFromOptions(options *InfoCollectionOptions) (Info, error) {
 	args := options.toAmiArgs()
 	infoBytes, _, err := ami.ExecuteInfo(app.GetPath(), args...)
 	if err != nil {
-		return base.GenerateFailedInfo(string(infoBytes), err), fmt.Errorf("failed to collect app info (%s)", err.Error())
+		failedInfo := Info{
+			InfoBase: base.GenerateFailedInfo(string(infoBytes), err),
+		}
+		return failedInfo, fmt.Errorf("failed to collect app info (%s)", err.Error())
 	}
 
-	return base.ParseInfoOutput[any](infoBytes)
+	info, err := base.ParseInfoOutput[Info](infoBytes)
+	if err != nil {
+		return Info{InfoBase: base.GenerateFailedInfo(string(infoBytes), err)}, err
+	}
+	return info, nil
 }
 
-func (app *Tezpay) GetInfo(optionsJson []byte) (map[string]interface{}, error) {
+func (app *Tezpay) GetInfo(optionsJson []byte) (any, error) {
 	return app.GetInfoFromOptions(app.getInfoCollectionOptions(optionsJson))
 }
 
@@ -74,9 +85,7 @@ func (app *Tezpay) GetServiceInfo() (map[string]base.AmiServiceInfo, error) {
 		return result, err
 	}
 
-	jsonString, _ := json.Marshal(info["services"])
-	json.Unmarshal(jsonString, &result)
-	return result, err
+	return info.Services, err
 }
 
 func (app *Tezpay) IsServiceStatus(id string, status string) (bool, error) {
@@ -91,9 +100,13 @@ func (app *Tezpay) IsServiceStatus(id string, status string) (bool, error) {
 }
 
 func (app *Tezpay) PrintInfo(optionsJson []byte) error {
-	tezpayInfo, err := app.GetInfo(optionsJson)
+	tezpayInfoRaw, err := app.GetInfo(optionsJson)
 	if err != nil {
 		return err
+	}
+	tezpayInfo, ok := tezpayInfoRaw.(Info)
+	if !ok {
+		return fmt.Errorf("invalid tezpay info type")
 	}
 
 	tezpayTable := table.NewWriter()
@@ -102,8 +115,8 @@ func (app *Tezpay) PrintInfo(optionsJson []byte) error {
 	tezpayTable.SetOutputMirror(os.Stdout)
 	tezpayTable.AppendHeader(table.Row{app.GetLabel(), app.GetLabel()}, table.RowConfig{AutoMerge: true})
 
-	tezpayTable.AppendRow(table.Row{"Status", fmt.Sprint(tezpayInfo["status"])})
-	tezpayTable.AppendRow(table.Row{"Status Level", fmt.Sprint(tezpayInfo["level"])})
+	tezpayTable.AppendRow(table.Row{"Status", tezpayInfo.Status})
+	tezpayTable.AppendRow(table.Row{"Status Level", tezpayInfo.Level})
 
 	tezpayTable.AppendSeparator()
 	tezpayTable.AppendRow(table.Row{"Services", "Services"}, table.RowConfig{AutoMerge: true})
@@ -111,11 +124,7 @@ func (app *Tezpay) PrintInfo(optionsJson []byte) error {
 	tezpayTable.AppendRow(table.Row{"Name", "Status (Started)"})
 	tezpayTable.AppendSeparator()
 
-	var services map[string]base.AmiServiceInfo
-	jsonString, _ := json.Marshal(tezpayInfo["services"])
-	json.Unmarshal(jsonString, &services)
-
-	for k, v := range services {
+	for k, v := range tezpayInfo.Services {
 		tezpayTable.AppendRow(table.Row{k, fmt.Sprintf("%v (%v)", v.Status, v.Started)})
 	}
 

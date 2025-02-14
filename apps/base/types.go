@@ -22,7 +22,7 @@ type BakeBuddyApp interface {
 	LoadAppDefinition() (map[string]interface{}, string, error)
 	LoadAppConfiguration() (map[string]interface{}, error)
 	GetAvailableInfoCollectionOptions() []AmiInfoCollectionOption
-	GetInfo(optionsJson []byte) (map[string]interface{}, error)
+	GetInfo(optionsJson []byte) (any, error)
 	GetServiceInfo() (map[string]AmiServiceInfo, error)
 	PrintInfo(optionsJson []byte) error
 	GetVersions(options *ami.CollectVersionsOptions) (*ami.InstanceVersions, error)

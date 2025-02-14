@@ -5,15 +5,21 @@ import (
 	"strings"
 )
 
-func GenerateFailedInfo(output string, err error) map[string]interface{} {
-	return map[string]interface{}{
-		"level":  "error",
-		"status": "Failed to get app status - '" + err.Error() + "!",
-		"output": output,
+type InfoBase struct {
+	Level  string `json:"level"`
+	Status string `json:"status"`
+	Output string `json:"output"`
+}
+
+func GenerateFailedInfo(output string, err error) InfoBase {
+	return InfoBase{
+		Level:  "error",
+		Status: "Failed to get app status - '" + err.Error() + "!",
+		Output: output,
 	}
 }
 
-func ParseInfoOutput[T any](infoBytes []byte) (map[string]T, error) {
+func ParseInfoOutput[TInfo any](infoBytes []byte) (TInfo, error) {
 	info := string(infoBytes)
 	lines := strings.Split(info, "\n")
 	i := len(lines) - 1
@@ -22,26 +28,7 @@ func ParseInfoOutput[T any](infoBytes []byte) (map[string]T, error) {
 	}
 	info = lines[i]
 
-	resultMap := make(map[string]T)
-	err := json.Unmarshal([]byte(info), &resultMap)
-	if err == nil {
-		return resultMap, nil
-	}
-
-	x := any(*new(T))
-	switch x.(type) {
-	case json.RawMessage:
-		return map[string]T{
-			"level":  any(json.RawMessage("error")).(T),
-			"status": any(json.RawMessage("Failed to parse ami info - '" + err.Error() + "!")).(T),
-			"output": any(json.RawMessage(info)).(T),
-		}, err
-	default:
-		return map[string]T{
-			"level":  any("error").(T),
-			"status": any("Failed to parse ami info - '" + err.Error() + "!").(T),
-			"output": any(info).(T),
-		}, err
-	}
-
+	var result TInfo
+	err := json.Unmarshal([]byte(info), &result)
+	return result, err
 }

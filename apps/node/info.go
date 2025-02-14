@@ -14,6 +14,41 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
+type Info struct {
+	base.InfoBase
+	Bootstrapped        bool                           `json:"bootstrapped"`
+	ChainHead           ChainHeadInfo                  `json:"chain_head"`
+	Connections         int                            `json:"connections"`
+	Services            map[string]base.AmiServiceInfo `json:"services"`
+	SyncState           string                         `json:"sync_state"`
+	Type                string                         `json:"type"`
+	Version             string                         `json:"version"`
+	VotingCurrentPeriod VotingCurrentPeriod            `json:"voting_current_period"`
+	VotingProposals     []interface{}                  `json:"voting_proposals"`
+	IsRemote            bool                           `json:"isRemote"`
+}
+
+type ChainHeadInfo struct {
+	Cycle        int    `json:"cycle"`
+	Hash         string `json:"hash"`
+	Level        int    `json:"level"`
+	Protocol     string `json:"protocol"`
+	ProtocolNext string `json:"protocol_next"`
+	Timestamp    string `json:"timestamp"`
+}
+
+type VotingCurrentPeriod struct {
+	Position     int          `json:"position"`
+	Remaining    int          `json:"remaining"`
+	VotingPeriod VotingPeriod `json:"voting_period"`
+}
+
+type VotingPeriod struct {
+	Index         int    `json:"index"`
+	Kind          string `json:"kind"`
+	StartPosition int    `json:"start_position"`
+}
+
 type InfoCollectionOptions struct {
 	Timeout  int
 	Chain    bool
@@ -67,19 +102,25 @@ func (app *Node) GetAvailableInfoCollectionOptions() []base.AmiInfoCollectionOpt
 	return result
 }
 
-func (app *Node) GetInfoFromOptions(options *InfoCollectionOptions) (map[string]interface{}, error) {
+func (app *Node) GetInfoFromOptions(options *InfoCollectionOptions) (Info, error) {
 	args := options.toAmiArgs()
 	infoBytes, _, err := ami.ExecuteInfo(app.GetPath(), args...)
 	if err != nil {
-		return base.GenerateFailedInfo(string(infoBytes), err), fmt.Errorf("failed to collect app info (%s)", err.Error())
+		failedInfo := Info{
+			InfoBase: base.GenerateFailedInfo(string(infoBytes), err),
+		}
+		return failedInfo, fmt.Errorf("failed to collect app info (%s)", err.Error())
 	}
 
-	info, err := base.ParseInfoOutput[any](infoBytes)
-	info["isRemote"], _ = ami.IsRemoteApp(app.GetPath())
+	info, err := base.ParseInfoOutput[Info](infoBytes)
+	info.IsRemote, _ = ami.IsRemoteApp(app.GetPath())
+	if err != nil {
+		return Info{InfoBase: base.GenerateFailedInfo(string(infoBytes), err)}, err
+	}
 	return info, err
 }
 
-func (app *Node) GetInfo(optionsJson []byte) (map[string]interface{}, error) {
+func (app *Node) GetInfo(optionsJson []byte) (any, error) {
 	return app.GetInfoFromOptions(app.getInfoCollectionOptions(optionsJson))
 }
 
@@ -91,9 +132,7 @@ func (app *Node) GetServiceInfo() (map[string]base.AmiServiceInfo, error) {
 		return result, err
 	}
 
-	jsonString, _ := json.Marshal(info["services"])
-	json.Unmarshal(jsonString, &result)
-	return result, err
+	return info.Services, err
 }
 
 func (app *Node) IsServiceStatus(id string, status string) (bool, error) {
@@ -108,10 +147,15 @@ func (app *Node) IsServiceStatus(id string, status string) (bool, error) {
 }
 
 func (app *Node) PrintInfo(optionsJson []byte) error {
-	nodeInfo, err := app.GetInfo(optionsJson)
+	nodeInfoRaw, err := app.GetInfo(optionsJson)
 	if err != nil {
 		return err
 	}
+	nodeInfo, ok := nodeInfoRaw.(Info)
+	if !ok {
+		return fmt.Errorf("invalid signer info type")
+	}
+
 	infoCollectionOptions := app.getInfoCollectionOptions(optionsJson)
 
 	nodeTable := table.NewWriter()
@@ -122,21 +166,21 @@ func (app *Node) PrintInfo(optionsJson []byte) error {
 
 	if infoCollectionOptions.All() || infoCollectionOptions.Simple || (infoCollectionOptions.Services && infoCollectionOptions.Chain) {
 		nodeTable.AppendSeparator()
-		nodeTable.AppendRow(table.Row{"Status", fmt.Sprint(nodeInfo["status"])})
-		nodeTable.AppendRow(table.Row{"Status Level", fmt.Sprint(nodeInfo["level"])})
-		nodeTable.AppendRow(table.Row{"Bootstrapped", fmt.Sprint(nodeInfo["bootstrapped"])})
-		nodeTable.AppendRow(table.Row{"Sync State", fmt.Sprint(nodeInfo["sync_state"])})
-		nodeTable.AppendRow(table.Row{"Connections", fmt.Sprint(nodeInfo["connections"])})
+		nodeTable.AppendRow(table.Row{"Status", nodeInfo.Status})
+		nodeTable.AppendRow(table.Row{"Status Level", nodeInfo.Level})
+		nodeTable.AppendRow(table.Row{"Bootstrapped", nodeInfo.Bootstrapped})
+		nodeTable.AppendRow(table.Row{"Sync State", nodeInfo.SyncState})
+		nodeTable.AppendRow(table.Row{"Connections", nodeInfo.Connections})
 	}
 
-	if chainInfo, ok := nodeInfo["chain_head"].(map[string]interface{}); ok && (infoCollectionOptions.All() || infoCollectionOptions.Chain) {
+	if chainInfo := nodeInfo.ChainHead; infoCollectionOptions.All() || infoCollectionOptions.Chain {
 		nodeTable.AppendSeparator()
 		nodeTable.AppendRow(table.Row{"Chain State", "Chain State"}, table.RowConfig{AutoMerge: true})
 		nodeTable.AppendSeparator()
-		nodeTable.AppendRow(table.Row{"Cycle", fmt.Sprint(chainInfo["cycle"])})
-		nodeTable.AppendRow(table.Row{"Level", fmt.Sprint(int(chainInfo["level"].(float64)))})
-		nodeTable.AppendRow(table.Row{"Protocol", fmt.Sprint(chainInfo["protocol"])})
-		nodeTable.AppendRow(table.Row{"Hash", fmt.Sprint(chainInfo["hash"])})
+		nodeTable.AppendRow(table.Row{"Cycle", chainInfo.Cycle})
+		nodeTable.AppendRow(table.Row{"Level", chainInfo.Level})
+		nodeTable.AppendRow(table.Row{"Protocol", chainInfo.Protocol})
+		nodeTable.AppendRow(table.Row{"Hash", chainInfo.Hash})
 	}
 
 	if infoCollectionOptions.All() || infoCollectionOptions.Simple || infoCollectionOptions.Services {
@@ -146,11 +190,7 @@ func (app *Node) PrintInfo(optionsJson []byte) error {
 		nodeTable.AppendRow(table.Row{"Name", "Status (Started)"})
 		nodeTable.AppendSeparator()
 
-		var services map[string]base.AmiServiceInfo
-		jsonString, _ := json.Marshal(nodeInfo["services"])
-		json.Unmarshal(jsonString, &services)
-
-		for k, v := range services {
+		for k, v := range nodeInfo.Services {
 			nodeTable.AppendRow(table.Row{k, fmt.Sprintf("%v (%v)", v.Status, v.Started)})
 		}
 	}

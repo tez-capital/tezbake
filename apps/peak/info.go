@@ -14,6 +14,13 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 )
 
+type Info struct {
+	base.InfoBase
+	Services map[string]base.AmiServiceInfo `json:"services"`
+	Type     string                         `json:"type"`
+	Version  string                         `json:"version"`
+}
+
 type InfoCollectionOptions struct {
 	//Timeout  int
 	Services bool
@@ -50,16 +57,23 @@ func (app *Peak) GetAvailableInfoCollectionOptions() []base.AmiInfoCollectionOpt
 	return result
 }
 
-func (app *Peak) GetInfoFromOptions(options *InfoCollectionOptions) (map[string]interface{}, error) {
+func (app *Peak) GetInfoFromOptions(options *InfoCollectionOptions) (Info, error) {
 	args := options.toAmiArgs()
 	infoBytes, _, err := ami.ExecuteInfo(app.GetPath(), args...)
 	if err != nil {
-		return base.GenerateFailedInfo(string(infoBytes), err), fmt.Errorf("failed to collect app info (%s)", err.Error())
+		failedInfo := Info{
+			InfoBase: base.GenerateFailedInfo(string(infoBytes), err),
+		}
+		return failedInfo, fmt.Errorf("failed to collect app info (%s)", err.Error())
 	}
-	return base.ParseInfoOutput[any](infoBytes)
+	info, err := base.ParseInfoOutput[Info](infoBytes)
+	if err != nil {
+		return Info{InfoBase: base.GenerateFailedInfo(string(infoBytes), err)}, err
+	}
+	return info, nil
 }
 
-func (app *Peak) GetInfo(optionsJson []byte) (map[string]interface{}, error) {
+func (app *Peak) GetInfo(optionsJson []byte) (any, error) {
 	return app.GetInfoFromOptions(app.getInfoCollectionOptions(optionsJson))
 }
 
@@ -70,9 +84,7 @@ func (app *Peak) GetServiceInfo() (map[string]base.AmiServiceInfo, error) {
 	if err != nil {
 		return result, err
 	}
-	jsonString, _ := json.Marshal(info["services"])
-	json.Unmarshal(jsonString, &result)
-	return result, err
+	return info.Services, err
 }
 
 func (app *Peak) IsServiceStatus(id string, status string) (bool, error) {
@@ -87,9 +99,13 @@ func (app *Peak) IsServiceStatus(id string, status string) (bool, error) {
 }
 
 func (app *Peak) PrintInfo(optionsJson []byte) error {
-	peakInfo, err := app.GetInfo(optionsJson)
+	peakInfoRaw, err := app.GetInfo(optionsJson)
 	if err != nil {
 		return err
+	}
+	peakInfo, ok := peakInfoRaw.(Info)
+	if !ok {
+		return fmt.Errorf("invalid signer info type")
 	}
 
 	peakTable := table.NewWriter()
@@ -98,8 +114,8 @@ func (app *Peak) PrintInfo(optionsJson []byte) error {
 	peakTable.SetOutputMirror(os.Stdout)
 	peakTable.AppendHeader(table.Row{app.GetLabel(), app.GetLabel()}, table.RowConfig{AutoMerge: true})
 
-	peakTable.AppendRow(table.Row{"Status", fmt.Sprint(peakInfo["status"])})
-	peakTable.AppendRow(table.Row{"Status Level", fmt.Sprint(peakInfo["level"])})
+	peakTable.AppendRow(table.Row{"Status", peakInfo.Status})
+	peakTable.AppendRow(table.Row{"Status Level", peakInfo.Level})
 
 	peakTable.AppendSeparator()
 	peakTable.AppendRow(table.Row{"Services", "Services"}, table.RowConfig{AutoMerge: true})
@@ -107,11 +123,7 @@ func (app *Peak) PrintInfo(optionsJson []byte) error {
 	peakTable.AppendRow(table.Row{"Name", "Status (Started)"})
 	peakTable.AppendSeparator()
 
-	var services map[string]base.AmiServiceInfo
-	jsonString, _ := json.Marshal(peakInfo["services"])
-	json.Unmarshal(jsonString, &services)
-
-	for k, v := range services {
+	for k, v := range peakInfo.Services {
 		peakTable.AppendRow(table.Row{k, fmt.Sprintf("%v (%v)", v.Status, v.Started)})
 	}
 
