@@ -44,9 +44,9 @@ type AmiServiceInfo struct {
 
 type AmiWalletInfo struct {
 	Authorized    bool   `json:"authorized,omitempty"`
-	BakingApp     string `json:"baking_app,omitempty"`
-	Device        string `json:"device,omitempty"`
+	AppVersion    string `json:"app_version,omitempty"`
 	DeviceAddress string `json:"device_address,omitempty"`
+	DeviceBus     string `json:"device_bus,omitempty"`
 	Kind          string `json:"kind,omitempty"`
 	Ledger        string `json:"ledger,omitempty"`
 	LedgerStatus  string `json:"ledger_status,omitempty"`
