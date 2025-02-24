@@ -1,6 +1,7 @@
 package base
 
 import (
+	"bytes"
 	"encoding/json"
 	"strings"
 )
@@ -31,4 +32,16 @@ func ParseInfoOutput[TInfo any](infoBytes []byte) (TInfo, error) {
 	var result TInfo
 	err := json.Unmarshal([]byte(info), &result)
 	return result, err
+}
+
+func isEmptyArray(raw json.RawMessage) bool {
+	trimmed := bytes.TrimSpace(raw)
+	return bytes.Equal(trimmed, []byte("[]"))
+}
+
+func UnmarshalIfNotEmptyArray[T any](data json.RawMessage, result T) error {
+	if len(data) == 0 || isEmptyArray(data) {
+		return nil
+	}
+	return json.Unmarshal(data, result)
 }

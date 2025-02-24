@@ -24,6 +24,29 @@ type Info struct {
 	Wallets  map[string]base.AmiWalletInfo  `json:"wallets"`
 }
 
+func (i *Info) UnmarshalJSON(data []byte) error {
+	type Alias Info
+	aux := &struct {
+		Services json.RawMessage `json:"services"`
+		Wallets  json.RawMessage `json:"wallets"`
+		*Alias
+	}{
+		Alias: (*Alias)(i),
+	}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	if err := base.UnmarshalIfNotEmptyArray(aux.Wallets, &i.Wallets); err != nil {
+		return err
+	}
+	if err := base.UnmarshalIfNotEmptyArray(aux.Services, &i.Services); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 type InfoCollectionOptions struct {
 	//Timeout  int
 	Wallets  bool

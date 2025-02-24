@@ -22,6 +22,25 @@ type Info struct {
 	Version  string                         `json:"version"`
 }
 
+func (i *Info) UnmarshalJSON(data []byte) error {
+	type Alias Info
+	aux := &struct {
+		Services json.RawMessage `json:"services"`
+		*Alias
+	}{
+		Alias: (*Alias)(i),
+	}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	if err := base.UnmarshalIfNotEmptyArray(aux.Services, &i.Services); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 type InfoCollectionOptions struct {
 	Timeout  int
 	Services bool
