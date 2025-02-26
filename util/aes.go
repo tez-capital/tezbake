@@ -16,14 +16,14 @@ const (
 	AES_DATA_PREFIX = "bake-buddy"
 )
 
-func PrepareAESKey(password, salt string) []byte {
+func PrepareAESKey(password string, salt []byte) []byte {
 	const (
 		time    = 1
 		memory  = 64 * 1024
 		threads = 4
 	)
 
-	return argon2.IDKey([]byte(password), []byte(salt), time, memory, threads, 32)
+	return argon2.IDKey([]byte(password), salt, time, memory, threads, 32)
 }
 
 func pad(data []byte) []byte {

@@ -102,7 +102,7 @@ var setupCmd = &cobra.Command{
 				RemoteUser:  util.GetCommandStringFlagS(cmd, RemoteUser),
 				RemoteReset: util.GetCommandBoolFlagS(cmd, RemoteReset),
 
-				RemoteElevate:     ami.ERemoteElevationKind(util.GetCommandStringFlagS(cmd, RemoteElevate)),
+				RemoteElevate:     ami.RemoteElevationKind(util.GetCommandStringFlagS(cmd, RemoteElevate)),
 				RemoteElevateUser: util.GetCommandStringFlagS(cmd, RemoteElevateUser),
 				//RemoteElevatePassword: remoteElevatePassword,
 

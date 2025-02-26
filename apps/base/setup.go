@@ -21,7 +21,7 @@ type SetupContext struct {
 	RemoteAuth            string
 	RemotePath            string
 	RemoteUser            string // user to run bb under on remote
-	RemoteElevate         ami.ERemoteElevationKind
+	RemoteElevate         ami.RemoteElevationKind
 	RemoteElevateUser     string // user to elevate to on remote
 	RemoteElevatePassword string
 	OneTimeElevate        bool
@@ -49,7 +49,7 @@ func (ctx *SetupContext) ToRemoteElevateCredentials() *ami.RemoteElevateCredenti
 		return nil
 	}
 	return &ami.RemoteElevateCredentials{
-		Kind:     ami.ERemoteElevationKind(ctx.RemoteElevate),
+		Kind:     ami.RemoteElevationKind(ctx.RemoteElevate),
 		User:     ctx.RemoteElevateUser,
 		Password: ctx.RemoteElevatePassword,
 	}

@@ -1,6 +1,7 @@
 package ami
 
 import (
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -34,18 +35,18 @@ var (
 	REMOTE_VARS = make(map[string]string)
 )
 
-type ERemoteElevationKind string
+type RemoteElevationKind string
 
 const (
-	REMOTE_ELEVATION_NONE ERemoteElevationKind = ""
-	REMOTE_ELEVATION_SU   ERemoteElevationKind = "su"
-	REMOTE_ELEVATION_SUDO ERemoteElevationKind = "sudo"
+	REMOTE_ELEVATION_NONE RemoteElevationKind = ""
+	REMOTE_ELEVATION_SU   RemoteElevationKind = "su"
+	REMOTE_ELEVATION_SUDO RemoteElevationKind = "sudo"
 )
 
 type RemoteElevateCredentials struct {
-	Kind     ERemoteElevationKind `json:"kind"`
-	User     string               `json:"user"`
-	Password string               `json:"password"`
+	Kind     RemoteElevationKind `json:"kind"`
+	User     string              `json:"user"`
+	Password string              `json:"password"`
 }
 
 func (creds *RemoteElevateCredentials) ToEnvMap() *map[string]string {
@@ -73,7 +74,7 @@ type RemoteConfiguration struct {
 	Host                          string                    `json:"host"`
 	Username                      string                    `json:"username"`
 	InstancePath                  string                    `json:"path"`
-	Elevate                       ERemoteElevationKind      `json:"elevate"`
+	Elevate                       RemoteElevationKind       `json:"elevate"`
 	PrivateKey                    string                    `json:"privateKey"`
 	PublicKey                     string                    `json:"publicKey"`
 	Port                          string                    `json:"port"`
@@ -115,12 +116,16 @@ func (config *RemoteConfiguration) GetElevationCredentials() (*RemoteElevateCred
 			return nil, err
 		}
 
-		encData, err := os.ReadFile(encPath)
+		encFileData, err := os.ReadFile(encPath)
 		if err != nil {
 			return nil, err
 		}
 
-		key := util.PrepareAESKey(password, config.Host+config.Username)
+		// read 128 bit salt from the end of the file
+		salt := encFileData[len(encFileData)-16:]
+		encData := encFileData[:len(encFileData)-16]
+
+		key := util.PrepareAESKey(password, salt)
 		decData, err := util.DecryptAES(key, encData)
 		if err != nil {
 			return nil, err
@@ -256,12 +261,12 @@ func WriteRemoteLocator(appDir string, rc *RemoteConfiguration, reset bool) {
 	remoteLocatorsCache[appDir] = rc // cache config
 }
 
-func WriteRemoteElevationCredentials(appDir string, rc *RemoteConfiguration, credentials *RemoteElevateCredentials) {
-	if rc.Elevate == REMOTE_ELEVATION_NONE {
-		log.Tracef("No elevation required for '%s', skipping saving elevate credentials", rc.InstancePath)
+func WriteRemoteElevationCredentials(appDir string, config *RemoteConfiguration, credentials *RemoteElevateCredentials) {
+	if config.Elevate == REMOTE_ELEVATION_NONE {
+		log.Tracef("No elevation required for '%s', skipping saving elevate credentials", config.InstancePath)
 		return
 	}
-	log.Trace("Writing elevation credentials of '" + appDir + "' for '" + rc.InstancePath + "'...")
+	log.Trace("Writing elevation credentials of '" + appDir + "' for '" + config.InstancePath + "'...")
 	serializedCredentials, err := json.MarshalIndent(credentials, "", "\t")
 	util.AssertEE(err, "Failed to serialize remote elevation credentials!", constants.ExitSerializationFailed)
 
@@ -276,9 +281,15 @@ func WriteRemoteElevationCredentials(appDir string, rc *RemoteConfiguration, cre
 	if password == "" {
 		elevationCredentialsFileName = ElevationCredentialsFile
 	} else {
-		key := util.PrepareAESKey(password, rc.Host+rc.Username)
+		salt := make([]byte, 16)
+		_, err = rand.Read(salt)
+		util.AssertE(err, "failed to generate salt")
+
+		key := util.PrepareAESKey(password, salt)
 		serializedCredentials, err = util.EncryptAES(key, serializedCredentials)
 		util.AssertE(err, "failed to encrypt credentials")
+
+		serializedCredentials = append(serializedCredentials, salt...) // append salt to the end of the file
 	}
 	credentialsPath := path.Join(appDir, elevationCredentialsFileName)
 	util.AssertEE(os.WriteFile(credentialsPath, serializedCredentials, 0644), "Failed to write remote elevation credentials!", constants.ExitIOError)
