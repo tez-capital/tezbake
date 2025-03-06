@@ -9,11 +9,12 @@ import (
 	"os"
 	"path"
 
+	"github.com/tez-capital/tezbake/constants"
 	"github.com/tez-capital/tezbake/system"
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/hjson/hjson-go"
+	"github.com/hjson/hjson-go/v4"
 	"github.com/pkg/sftp"
 	log "github.com/sirupsen/logrus"
 )
@@ -92,7 +93,7 @@ func writeAppConfigurationToRemote(sftpClient *sftp.Client, workingDir string, c
 	}
 	_, appDefPath, err = findAppDefinitionRemote(sftpClient, workingDir)
 	if err != nil || appDefPath == "" {
-		appDefPath = path.Join(workingDir, "app.json")
+		appDefPath = path.Join(workingDir, constants.DefaultAppJsonName)
 	}
 	appDefFile, err := sftpClient.OpenFile(appDefPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
 	if err != nil {
@@ -174,7 +175,7 @@ func ReadAppDefinition(workingDir string, appConfigPath string) (*map[string]int
 	}
 
 	result := make(map[string]interface{})
-	err = json.Unmarshal(appDef, &result)
+	err = hjson.Unmarshal(appDef, &result)
 	if err != nil {
 		return nil, err
 	}

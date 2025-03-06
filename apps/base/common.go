@@ -1,11 +1,11 @@
 package base
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path"
 
+	"github.com/hjson/hjson-go/v4"
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/util"
@@ -60,7 +60,7 @@ func GenerateConfiguration(template map[string]interface{}, ctx *SetupContext) (
 
 	appConfiguration := appDef["configuration"].(map[string]interface{})
 	appCtxConfiguration := make(map[string]interface{})
-	if err := json.Unmarshal([]byte(ctx.Configuration), &appCtxConfiguration); err == nil || ctx.Configuration == "" {
+	if err := hjson.Unmarshal([]byte(ctx.Configuration), &appCtxConfiguration); err == nil || ctx.Configuration == "" {
 		for k, v := range appCtxConfiguration {
 			appConfiguration[k] = v
 		}
@@ -82,7 +82,7 @@ func GenerateConfiguration(template map[string]interface{}, ctx *SetupContext) (
 	}
 
 	configurationFile := make(map[string]interface{})
-	err = json.Unmarshal(configurationFileJson, &configurationFile)
+	err = hjson.Unmarshal(configurationFileJson, &configurationFile)
 	if err != nil {
 		return appDef, fmt.Errorf("invalid configuration - %s (%s)", ctx.Configuration, err.Error())
 	}
