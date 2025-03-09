@@ -30,7 +30,7 @@ else
 fi
 
 if tezbake version | grep "$LATEST"; then
-	echo "Latest tezbake already available."
+	echo "latest tezbake already available"
 	exit 0
 fi
 
@@ -40,23 +40,49 @@ if [ "$PLATFORM" = "x86_64" ]; then
 elif [ "$PLATFORM" = "aarch64" ]; then
 	PLATFORM="arm64"
 else
-	echo "Unsupported platform: $PLATFORM" 1>&2
+	echo "unsupported platform: $PLATFORM" 1>&2
 	exit 1
 fi
 
-if [ "$PRERELEASE" = true ]; then
-	echo "Downloading latest tezbake prerelease for $PLATFORM..."
+BIN="tezbake"
+rm -f "/usr/local/bin/$BIN"
+rm -f "/usr/bin/$BIN"
+rm -f "/bin/$BIN"
+rm -f "/usr/local/sbin/$BIN"
+rm -f "/usr/sbin/$BIN"
+rm -f "/sbin/$BIN"
+# check destination folder
+if [ -d "/usr/local/bin" ]; then
+    DESTINATION="/usr/local/bin/$BIN"
+elif [ -d "/usr/bin" ]; then
+    DESTINATION="/usr/bin/$BIN"
+elif [ -d "/bin" ]; then
+    DESTINATION="/bin/$BIN"
+elif [ -d "/usr/local/sbin" ]; then
+    DESTINATION="/usr/local/sbin/$BIN"
+elif [ -d "/usr/sbin" ]; then
+    DESTINATION="/usr/sbin/$BIN"
+elif [ -d "/sbin" ]; then
+    DESTINATION="/sbin/$BIN"
 else
-	echo "Downloading tezbake-linux-$PLATFORM $LATEST..."
+    echo "no suitable destination folder found" 1>&2
+    exit 1
+fi
+
+
+if [ "$PRERELEASE" = true ]; then
+	echo "downloading latest tezbake prerelease for $PLATFORM..."
+else
+	echo "downloading tezbake-linux-$PLATFORM $LATEST..."
 fi
 
 if "$@" "https://github.com/tez-capital/tezbake/releases/download/$LATEST/tezbake-linux-$PLATFORM" &&
-	mv "$TMP_NAME" /usr/sbin/tezbake &&
-	chmod +x /usr/sbin/tezbake; then
+	mv "$TMP_NAME" "$DESTINATION" &&
+	chmod +x "$DESTINATION"; then
 	if [ "$1" = "--prerelease" ]; then
-		echo "Latest tezbake prerelease for $PLATFORM successfully installed."
+		echo "latest tezbake prerelease for $PLATFORM successfully installed"
 	else
-		echo "tezbake $LATEST for $PLATFORM successfully installed."
+		echo "tezbake $LATEST for $PLATFORM successfully installed"
 	fi
 else
 	echo "tezbake installation failed!" 1>&2
