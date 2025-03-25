@@ -60,35 +60,42 @@ func GenerateConfiguration(template map[string]interface{}, ctx *SetupContext) (
 
 	appConfiguration := appDef["configuration"].(map[string]interface{})
 	appCtxConfiguration := make(map[string]interface{})
-	if err := hjson.Unmarshal([]byte(ctx.Configuration), &appCtxConfiguration); err == nil || ctx.Configuration == "" {
-		for k, v := range appCtxConfiguration {
-			appConfiguration[k] = v
-		}
-		return appDef, nil
-	}
 
-	tmpConfigurationFile := path.Join(os.TempDir(), "bb-configuration")
-	if util.IsValidUrl(ctx.Configuration) {
+	switch {
+	case ctx.Configuration == "":
+		return appDef, nil
+	case util.IsValidUrl(ctx.Configuration):
+		tmpConfigurationFile := path.Join(os.TempDir(), "bb-configuration")
+
 		err := util.DownloadFile(ctx.Configuration, tmpConfigurationFile, false)
 		if err != nil {
 			return appDef, fmt.Errorf("failed to download configuration file - %s", ctx.Configuration)
 		}
 		ctx.Configuration = tmpConfigurationFile
-	}
 
-	configurationFileJson, err := os.ReadFile(ctx.Configuration)
-	if err != nil {
-		return appDef, fmt.Errorf("invalid configuration - %s (%s)", ctx.Configuration, err.Error())
-	}
+		configurationFileJson, err := os.ReadFile(ctx.Configuration)
+		if err != nil {
+			return appDef, fmt.Errorf("invalid configuration - %s (%s)", ctx.Configuration, err.Error())
+		}
 
-	configurationFile := make(map[string]interface{})
-	err = hjson.Unmarshal(configurationFileJson, &configurationFile)
-	if err != nil {
-		return appDef, fmt.Errorf("invalid configuration - %s (%s)", ctx.Configuration, err.Error())
-	}
-	for k, v := range configurationFile {
-		appConfiguration[k] = v
-	}
+		configurationFile := make(map[string]interface{})
+		err = hjson.Unmarshal(configurationFileJson, &configurationFile)
+		if err != nil {
+			return appDef, fmt.Errorf("invalid configuration - %s (%s)", ctx.Configuration, err.Error())
+		}
+		for k, v := range configurationFile {
+			appConfiguration[k] = v
+		}
 
-	return appDef, nil
+		return appDef, nil
+	default:
+		err := hjson.Unmarshal([]byte(ctx.Configuration), &appCtxConfiguration)
+		if err != nil {
+			return appDef, fmt.Errorf("invalid configuration - %s (%s)", ctx.Configuration, err.Error())
+		}
+		for k, v := range appCtxConfiguration {
+			appConfiguration[k] = v
+		}
+		return appDef, nil
+	}
 }

@@ -1,7 +1,7 @@
 package constants
 
 const (
-	VERSION = "0.16.7-beta"
+	VERSION = "0.16.8-beta"
 
 	DefaultBBDirectory       string = "/bake-buddy"
 	DefaultRemoteBBDirectory string = DefaultBBDirectory
