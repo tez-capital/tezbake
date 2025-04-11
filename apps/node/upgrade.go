@@ -5,6 +5,7 @@ import (
 
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps/base"
+	"github.com/tez-capital/tezbake/constants"
 	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
 )
@@ -26,7 +27,7 @@ func (app *Node) Upgrade(ctx *base.UpgradeContext, args ...string) (int, error) 
 		ami.PrepareRemote(app.GetPath(), locator, system.SSH_MODE_KEY)
 	}
 
-	wasRunning, _ := app.IsServiceStatus("node", "running")
+	wasRunning, _ := app.IsServiceStatus(constants.NodeAppServiceId, "running")
 	if !isRemote && wasRunning {
 		exitCode, err := app.Stop()
 		if err != nil {

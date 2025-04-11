@@ -112,7 +112,7 @@ func (app *Tezpay) IsServiceStatus(id string, status string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if service, ok := serviceInfo[constants.NodeAppServiceId]; ok && service.Status == status {
+	if service, ok := serviceInfo[constants.TezpayAppServiceId]; ok && service.Status == status {
 		return true, nil
 	}
 	return false, nil

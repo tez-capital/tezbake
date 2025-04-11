@@ -9,6 +9,8 @@ const (
 	PeakAppServiceId   string = "peak"
 	TezpayAppId        string = "pay"
 	TezpayAppServiceId string = "pay"
+	DalAppId           string = "dal"
+	DalAppServiceId    string = "dal"
 
 	PrivateKeyFile string = "idkey"
 	PublicKeyFile  string = "idkey.pub"
