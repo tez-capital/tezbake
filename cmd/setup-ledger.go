@@ -149,7 +149,7 @@ var setupLedgerCmd = &cobra.Command{
 
 		if (shouldOperateOnDal || !isAnySelected) && apps.DalNode.IsInstalled() {
 			if importKey.IsTrue() { // node only imports key
-				util.AssertBE(apps.node.IsInstalled(), "node is not installed - can not import keys to dal node", constants.ExitAppNotInstalled)
+				util.AssertBE(apps.Node.IsInstalled(), "node is not installed - can not import keys to dal node", constants.ExitAppNotInstalled)
 
 				var wasSignerRunning bool
 				if !cli.IsRemoteInstance {
