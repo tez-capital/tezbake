@@ -19,13 +19,11 @@ type SetupContext struct {
 	// remote info
 	Remote                string
 	RemoteAuth            string
-	RemotePath            string
-	RemoteUser            string // user to run bb under on remote
 	RemoteElevate         ami.RemoteElevationKind
-	RemoteElevateUser     string // user to elevate to on remote
 	RemoteElevatePassword string
-	OneTimeElevate        bool
 	RemoteReset           bool
+
+	Dal bool
 }
 
 func (ctx *SetupContext) ToRemoteConfiguration(app BakeBuddyApp) *ami.RemoteConfiguration {
@@ -37,7 +35,7 @@ func (ctx *SetupContext) ToRemoteConfiguration(app BakeBuddyApp) *ami.RemoteConf
 		Username:                      connectionDetails.Username,
 		Host:                          connectionDetails.Host,
 		Port:                          connectionDetails.Port,
-		InstancePath:                  ctx.RemotePath,
+		InstancePath:                  constants.DefaultBBDirectory,
 		Elevate:                       ctx.RemoteElevate,
 		PrivateKey:                    path.Join(app.GetPath(), constants.PrivateKeyFile),
 		PublicKey:                     path.Join(app.GetPath(), constants.PublicKeyFile),
@@ -49,8 +47,8 @@ func (ctx *SetupContext) ToRemoteElevateCredentials() *ami.RemoteElevateCredenti
 		return nil
 	}
 	return &ami.RemoteElevateCredentials{
-		Kind:     ami.RemoteElevationKind(ctx.RemoteElevate),
-		User:     ctx.RemoteElevateUser,
+		Kind: ami.RemoteElevationKind(ctx.RemoteElevate),
+		// User:     ctx.RemoteElevateUser,
 		Password: ctx.RemoteElevatePassword,
 	}
 }

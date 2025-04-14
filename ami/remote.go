@@ -398,26 +398,26 @@ func PrepareRemote(appDir string, config *RemoteConfiguration, auth string) erro
 	return nil
 }
 
-type AppRemoteSession struct {
+type TezbakeRemoteSession struct {
 	sshClient    *ssh.Client
 	sftpSession  *sftp.Client
 	instancePath string
 	locator      *RemoteConfiguration
 }
 
-func (session *AppRemoteSession) Close() {
+func (session *TezbakeRemoteSession) Close() {
 	session.sshClient.Close()
 	session.sftpSession.Close()
 }
 
-func (locator *RemoteConfiguration) OpenAppRemoteSession() (*AppRemoteSession, error) {
+func (locator *RemoteConfiguration) OpenAppRemoteSession() (*TezbakeRemoteSession, error) {
 	keys, err := locator.ToAppKeyPair()
 	if err != nil {
 		return nil, err
 	}
 	client, sftp, err := system.OpenSshSessionS(locator.ToSshConnectionDetails(), system.SSH_MODE_KEY, keys.PrivateKey)
 
-	return &AppRemoteSession{
+	return &TezbakeRemoteSession{
 		sshClient:    client,
 		sftpSession:  sftp,
 		instancePath: locator.InstancePath,
@@ -474,7 +474,7 @@ func keepJustRootCmdArgs(args []string) []string {
 	return args[:i]
 }
 
-func (session *AppRemoteSession) prepareArgsForProxy(passthrough bool) []string {
+func (session *TezbakeRemoteSession) prepareArgsForProxy(passthrough bool) []string {
 	args := os.Args
 	proxyArgs := make([]string, 0)
 	proxyArgs = append(proxyArgs, "tezbake")
@@ -541,13 +541,13 @@ func runSshCommand(client *ssh.Client, cmd string, locator *RemoteConfiguration,
 	return result
 }
 
-func (session *AppRemoteSession) ProxyToRemoteApp() (int, error) {
+func (session *TezbakeRemoteSession) ProxyToRemoteApp() (int, error) {
 	args := session.prepareArgsForProxy(true)
 	result := runSshCommand(session.sshClient, strings.Join(args, " "), session.locator, system.RunPipedSshCommand)
 	return result.ExitCode, result.Error
 }
 
-func (session *AppRemoteSession) ProxyToRemoteAppGetOutput() (string, int, error) {
+func (session *TezbakeRemoteSession) ProxyToRemoteAppGetOutput() (string, int, error) {
 	args := session.prepareArgsForProxy(false)
 
 	result := runSshCommand(session.sshClient, strings.Join(args, " "), session.locator, system.RunSshCommand)
@@ -555,7 +555,7 @@ func (session *AppRemoteSession) ProxyToRemoteAppGetOutput() (string, int, error
 	return string(result.Stdout), result.ExitCode, result.Error
 }
 
-func (session *AppRemoteSession) ProxyToRemoteAppExecuteInfo(args []string) ([]byte, int, error) {
+func (session *TezbakeRemoteSession) ProxyToRemoteAppExecuteInfo(args []string) ([]byte, int, error) {
 	args = append([]string{"ami"}, args...)
 
 	result := runSshCommand(session.sshClient, shellquote.Join(args...), session.locator, system.RunSshCommand)
@@ -563,11 +563,27 @@ func (session *AppRemoteSession) ProxyToRemoteAppExecuteInfo(args []string) ([]b
 	return result.Stdout, result.ExitCode, result.Error
 }
 
-func (session *AppRemoteSession) IsRemoteAppInstalled(id string) ([]byte, int, error) {
+func (session *TezbakeRemoteSession) IsRemoteAppInstalled(id string) ([]byte, int, error) {
 	args := keepJustRootCmdArgs(session.prepareArgsForProxy(false))
 	args = append(args, "is-app-installed", id)
 
 	result := runSshCommand(session.sshClient, strings.Join(args, " "), session.locator, system.RunSshCommand)
 
 	return result.Stdout, result.ExitCode, result.Error
+}
+
+func (session *TezbakeRemoteSession) writeFileToRemote(fullPath string, content []byte, mode os.FileMode) error {
+	file, err := session.sftpSession.OpenFile(fullPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.Write(content)
+	if err != nil {
+		return err
+	}
+
+	err = file.Chmod(mode)
+	return err
 }

@@ -80,34 +80,6 @@ func LoadAppConfiguration(app string) (map[string]interface{}, error) {
 	return nil, fmt.Errorf("failed to load '%s' configuration - unexpected format", app)
 }
 
-func writeAppConfigurationToRemote(sftpClient *sftp.Client, workingDir string, configuration map[string]interface{}) error {
-	var appDef []byte
-	var appDefPath string
-	log.Tracef("Writing app configuration to remote %s...", workingDir)
-	err := os.MkdirAll(workingDir, os.ModePerm)
-	if err == nil {
-		appDef, err = json.MarshalIndent(configuration, "", "\t")
-	}
-	if err != nil {
-		return err
-	}
-	_, appDefPath, err = findAppDefinitionRemote(sftpClient, workingDir)
-	if err != nil || appDefPath == "" {
-		appDefPath = path.Join(workingDir, constants.DefaultAppJsonName)
-	}
-	appDefFile, err := sftpClient.OpenFile(appDefPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
-	if err != nil {
-		return err
-	}
-	defer appDefFile.Close()
-	_, err = appDefFile.Write(appDef)
-	if err == nil {
-		err = appDefFile.Chmod(0644)
-	}
-	log.Tracef("App configuration written to %s", appDefPath)
-	return err
-}
-
 func prepareFolderStructure(sshClient *ssh.Client, instancePath string, app string, user string, env *map[string]string) error {
 	workingDir := path.Join(instancePath, app)
 	log.Tracef("Preparing folder structure for remote %s...", workingDir)
@@ -119,6 +91,56 @@ func prepareFolderStructure(sshClient *ssh.Client, instancePath string, app stri
 	encodedCmd = base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("chown -R %s:%s ", user, user) + instancePath))
 	result = system.RunSshCommand(sshClient, "tezbake execute --elevate --base64 "+encodedCmd, env)
 	return result.Error
+}
+
+func writeAppConfigurationToRemote(session *TezbakeRemoteSession, workingDir string, configuration map[string]interface{}) error {
+	var appDef []byte
+	var appDefPath string
+	log.Tracef("Writing app configuration to remote %s...", workingDir)
+
+	appDef, err := json.MarshalIndent(configuration, "", "\t")
+	if err != nil {
+		return err
+	}
+	_, appDefPath, err = findAppDefinitionRemote(session.sftpSession, workingDir)
+	if err != nil || appDefPath == "" {
+		appDefPath = path.Join(workingDir, constants.DefaultAppJsonName)
+	}
+	err = session.writeFileToRemote(appDefPath, appDef, 0644)
+	if err != nil {
+		return err
+	}
+
+	log.Tracef("App configuration written to %s", appDefPath)
+	return nil
+}
+
+func WriteFile(workingDir string, content []byte, relativePath string) error {
+	if isRemote, locator := IsRemoteApp(workingDir); isRemote {
+		session, err := locator.OpenAppRemoteSession()
+		if err != nil {
+			return err
+		}
+		defer session.Close()
+
+		credentials, err := locator.GetElevationCredentials()
+		if err != nil {
+			return err
+		}
+		err = prepareFolderStructure(session.sshClient, locator.InstancePath, locator.App, locator.Username, credentials.ToEnvMap())
+		if err != nil {
+			return err
+		}
+		targetPath := path.Join(workingDir, relativePath)
+		return session.writeFileToRemote(targetPath, content, 0644)
+	}
+
+	targetPath := path.Join(workingDir, relativePath)
+	err := os.MkdirAll(path.Dir(targetPath), os.ModePerm)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(targetPath, content, 0644)
 }
 
 func WriteAppDefinition(workingDir string, configuration map[string]interface{}, appConfigPath string) error {
@@ -137,7 +159,7 @@ func WriteAppDefinition(workingDir string, configuration map[string]interface{},
 		if err != nil {
 			return err
 		}
-		return writeAppConfigurationToRemote(session.sftpSession, path.Join(locator.InstancePath, locator.App), configuration)
+		return writeAppConfigurationToRemote(session, path.Join(locator.InstancePath, locator.App), configuration)
 	}
 	var appDef []byte
 	var appDefPath string

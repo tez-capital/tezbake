@@ -18,12 +18,15 @@ import (
 )
 
 const (
-	RemoteNode          = "remote-node"
-	RemoteAuth          = "remote-auth"
-	RemoteElevate       = "remote-elevate"
-	RemoteElevateUser   = "remote-elevate-user"
-	RemoteUser          = "remote-user"
-	RemotePath          = "remote-path"
+	NodeRemote        = "node-remote"
+	NodeRemoteAuth    = "node-remote-auth"
+	NodeRemoteElevate = "node-remote-elevate"
+	DalRemote         = "dal-remote"
+	DalRemoteAuth     = "dal-remote-auth"
+	DalRemoteElevate  = "dal-remote-elevate"
+	// RemoteElevateUser   = "remote-elevate-user"
+	// RemoteUser          = "remote-user"
+	// RemotePath          = "remote-path"
 	RemoteReset         = "remote-reset"
 	UpgradeStorage      = "upgrade-storage"
 	Branch              = "branch"
@@ -37,6 +40,7 @@ const (
 	SignerConfiguration = "signer-configuration"
 	SetupAmi            = "setup-ami"
 	Force               = "force"
+	WithDal             = "with-dal"
 )
 
 var setupCmd = &cobra.Command{
@@ -75,10 +79,16 @@ var setupCmd = &cobra.Command{
 			util.AssertEE(err, "Failed to install ami and eli!", exitCode)
 		}
 
-		for _, v := range GetAppsBySelectionCriteria(cmd, AppSelectionCriteria{
+		appsToProcess := GetAppsBySelectionCriteria(cmd, AppSelectionCriteria{
 			InitialSelection:  AllApps,
 			FallbackSelection: ImplicitApps,
-		}) {
+		})
+
+		if withDal := util.GetCommandBoolFlagS(cmd, WithDal); withDal {
+			appsToProcess = append(appsToProcess, apps.DalNode)
+		}
+
+		for _, v := range appsToProcess {
 			appId := v.GetId()
 			if cli.IsRemoteInstance && !v.SupportsRemote() {
 				log.Debug(fmt.Sprintf("'%s' does not support remote. Skipping...", appId))
@@ -96,17 +106,20 @@ var setupCmd = &cobra.Command{
 				Branch:        branch,
 				User:          username,
 
-				Remote:      util.GetCommandStringFlagS(cmd, RemoteNode),
-				RemoteAuth:  util.GetCommandStringFlagS(cmd, RemoteAuth),
-				RemotePath:  util.GetCommandStringFlagS(cmd, RemotePath),
-				RemoteUser:  util.GetCommandStringFlagS(cmd, RemoteUser),
 				RemoteReset: util.GetCommandBoolFlagS(cmd, RemoteReset),
+				Force:       force,
+			}
 
-				RemoteElevate:     ami.RemoteElevationKind(util.GetCommandStringFlagS(cmd, RemoteElevate)),
-				RemoteElevateUser: util.GetCommandStringFlagS(cmd, RemoteElevateUser),
-				//RemoteElevatePassword: remoteElevatePassword,
-
-				Force: force,
+			switch v.GetId() {
+			case apps.Node.GetId():
+				ctx.Remote = util.GetCommandStringFlagS(cmd, NodeRemote)
+				ctx.RemoteAuth = util.GetCommandStringFlagS(cmd, NodeRemoteAuth)
+				ctx.RemoteElevate = ami.RemoteElevationKind(util.GetCommandStringFlagS(cmd, NodeRemoteElevate))
+				ctx.Dal = util.GetCommandBoolFlagS(cmd, WithDal) || apps.DalNode.IsInstalled()
+			case apps.DalNode.GetId():
+				ctx.Remote = util.GetCommandStringFlagS(cmd, DalRemote)
+				ctx.RemoteAuth = util.GetCommandStringFlagS(cmd, DalRemoteAuth)
+				ctx.RemoteElevate = ami.RemoteElevationKind(util.GetCommandStringFlagS(cmd, DalRemoteElevate))
 			}
 
 			if v.IsInstalled() && !force && !cli.IsRemoteInstance {
@@ -152,13 +165,14 @@ func init() {
 
 	setupCmd.Flags().StringP(Id, "i", "bb-default", "Id of BB instance.")
 
-	setupCmd.Flags().String(RemoteNode, "", "username:<ssh key file>@address (experimental)")
-	setupCmd.Flags().String(RemoteAuth, "", "pass|key:<path to key>  (experimental)")
-	setupCmd.Flags().String(RemotePath, constants.DefaultRemoteBBDirectory, "where on remote install node - defaults to '/bake-buddy/node' (experimental)")
-	setupCmd.Flags().String(RemoteElevate, "", "only 'sudo' supported now (experimental)")
-	setupCmd.Flags().String(RemoteElevateUser, "", "user to elevate to (experimental)")
-	setupCmd.Flags().MarkHidden(RemoteElevateUser)
-	setupCmd.Flags().String(RemoteUser, constants.DefaultRemoteUser, "Sets user remote node will be operated under. (experimental, ignored if remote uses elevation)")
+	setupCmd.Flags().String(NodeRemote, "", "username:<ssh key file>@address (experimental)")
+	setupCmd.Flags().String(NodeRemoteAuth, "", "pass|key:<path to key>  (experimental)")
+	setupCmd.Flags().String(NodeRemoteElevate, "", "only 'sudo' supported now (experimental)")
+
+	setupCmd.Flags().Bool(WithDal, false, "Setup dal node. (experimental)")
+	setupCmd.Flags().String(DalRemote, "", "username:<ssh key file>@address (experimental)")
+	setupCmd.Flags().String(DalRemoteAuth, "", "pass|key:<path to key>  (experimental)")
+	setupCmd.Flags().String(DalRemoteElevate, "", "only 'sudo' supported now (experimental)")
 
 	setupCmd.Flags().Bool(RemoteReset, false, "Resets and reconfigures remote node locator. (experimental)")
 

@@ -14,4 +14,7 @@ const (
 
 	PrivateKeyFile string = "idkey"
 	PublicKeyFile  string = "idkey.pub"
+
+	// dal
+	AttesterProfilesFile string = "attester_profiles.list"
 )

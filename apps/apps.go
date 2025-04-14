@@ -16,7 +16,7 @@ var (
 	Peak    = peak.FromPath("")
 	Pay     = pay.FromPath("")
 	All     = []base.BakeBuddyApp{
-		Node, Signer, Peak, Pay, DalNode,
+		Node, Signer, DalNode, Peak, Pay,
 	}
 	Implicit = []base.BakeBuddyApp{
 		Node, Signer,
