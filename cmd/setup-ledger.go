@@ -199,6 +199,7 @@ var setupLedgerCmd = &cobra.Command{
 func init() {
 	setupLedgerCmd.Flags().BoolP("node", "n", false, "Import key to node (affects import-key only)")
 	setupLedgerCmd.Flags().BoolP("signer", "s", false, "Import key to signer (affects import-key only)")
+	setupLedgerCmd.Flags().BoolP("dal", "d", false, "Import key to dal node (affects import-key only)")
 
 	importKey = addCombinedFlag(setupLedgerCmd, "import-key", "", "Import key from ledger (optionally specify derivation path)")
 	setupLedgerCmd.Flags().String("ledger-id", "", "Ledger id to import key from (affects import-key only)")
