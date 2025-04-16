@@ -1,26 +1,19 @@
-docs/cmd/tezbake_upgrade.md## tezbake upgrade
+docs/cmd/tezbake_dal.md## tezbake dal
 
-Upgrades BB.
+Passes args through to dal node app.
 
 ### Synopsis
 
-Upgrades BB instance.
+Passes args through to dal node app.
 
 ```
-tezbake upgrade [flags]
+tezbake dal [flags]
 ```
 
 ### Options
 
 ```
-      --dal               Upgrade dal.
-  -h, --help              help for upgrade
-      --node              Upgrade node.
-      --pay               Upgrade pay.
-      --peak              Upgrade peak.
-  -a, --setup-ami         Install latest ami during the BB upgrade.
-      --signer            Upgrade signer.
-  -s, --upgrade-storage   Upgrade storage during the upgrade.
+  -h, --help   help for dal
 ```
 
 ### Options inherited from parent commands

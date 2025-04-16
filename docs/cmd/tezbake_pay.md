@@ -1,26 +1,19 @@
-docs/cmd/tezbake_upgrade.md## tezbake upgrade
+docs/cmd/tezbake_pay.md## tezbake pay
 
-Upgrades BB.
+Passes args through to tezpay app.
 
 ### Synopsis
 
-Upgrades BB instance.
+Passes args through to tezpay app.
 
 ```
-tezbake upgrade [flags]
+tezbake pay [flags]
 ```
 
 ### Options
 
 ```
-      --dal               Upgrade dal.
-  -h, --help              help for upgrade
-      --node              Upgrade node.
-      --pay               Upgrade pay.
-      --peak              Upgrade peak.
-  -a, --setup-ami         Install latest ami during the BB upgrade.
-      --signer            Upgrade signer.
-  -s, --upgrade-storage   Upgrade storage during the upgrade.
+  -h, --help   help for pay
 ```
 
 ### Options inherited from parent commands
