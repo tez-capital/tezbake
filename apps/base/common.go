@@ -42,6 +42,10 @@ func LoadAppConfiguration(app IAmiBasedApp) (map[string]interface{}, error) {
 	return nil, fmt.Errorf("failed to load '%s' configuration - unexpected format", app.GetPath())
 }
 
+func GetActiveModel(app IAmiBasedApp) (map[string]interface{}, error) {
+	return ami.GetAppActiveModel(app.GetPath())
+}
+
 type BakeBuddyAppDefinition struct {
 	Id      string
 	Control BakeBuddyApp

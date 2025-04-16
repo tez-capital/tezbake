@@ -19,7 +19,7 @@ var (
 		"id":   constants.DalAppId,
 		"type": map[string]interface{}{"id": "xtz.dal", "version": "latest"},
 		"configuration": map[string]interface{}{
-			"endpoint": "http://127.0.0.1:8732",
+			"NODE_ENDPOINT": "http://127.0.0.1:8732",
 		},
 		"user": "",
 	}
@@ -47,7 +47,7 @@ func (app *DalNode) GetPath() string {
 }
 
 func (app *DalNode) GetId() string {
-	return strings.ToLower(constants.NodeAppId)
+	return strings.ToLower(constants.DalAppId)
 }
 
 func (app *DalNode) GetUser() string {

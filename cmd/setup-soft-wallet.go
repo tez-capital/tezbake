@@ -79,20 +79,19 @@ var setupSoftWalletCmd = &cobra.Command{
 
 				isSignerRunning, _ := apps.Signer.IsServiceStatus(constants.SignerAppServiceId, "running")
 				util.AssertBE(isSignerRunning, "Signer is not running. Please start signer services.", constants.ExitSignerNotOperational)
-
-				defer func() {
-					if isRemote := apps.Node.IsRemoteApp(); !isRemote {
-						nodeDef, _, err := apps.Node.LoadAppDefinition()
-						util.AssertEE(err, "Failed to load node definition!", constants.ExitAppConfigurationLoadFailed)
-						nodeUser, ok := nodeDef["user"].(string)
-						util.AssertBE(ok, "Failed to get username from node!", constants.ExitInvalidUser)
-						util.ChownR(nodeUser, path.Join(apps.Node.GetPath(), "data"))
-					}
-					if !wasSignerRunning && !cli.IsRemoteInstance {
-						apps.Signer.Stop()
-					}
-				}()
 			}
+			defer func() {
+				if isRemote := apps.Node.IsRemoteApp(); !isRemote {
+					nodeDef, _, err := apps.Node.LoadAppDefinition()
+					util.AssertEE(err, "Failed to load node definition!", constants.ExitAppConfigurationLoadFailed)
+					nodeUser, ok := nodeDef["user"].(string)
+					util.AssertBE(ok, "Failed to get username from node!", constants.ExitInvalidUser)
+					util.ChownR(nodeUser, path.Join(apps.Node.GetPath(), "data"))
+				}
+				if !wasSignerRunning && !cli.IsRemoteInstance {
+					apps.Signer.Stop()
+				}
+			}()
 
 			bakerAddr, exitCode, err := apps.Signer.GetKeyHash(keyAlias)
 			util.AssertEE(err, "Failed to get baker key hash!", exitCode)
@@ -120,20 +119,19 @@ var setupSoftWalletCmd = &cobra.Command{
 
 					isSignerRunning, _ := apps.Signer.IsServiceStatus(constants.SignerAppServiceId, "running")
 					util.AssertBE(isSignerRunning, "Signer is not running. Please start signer services.", constants.ExitSignerNotOperational)
-
-					defer func() {
-						if isRemote := apps.Node.IsRemoteApp(); !isRemote {
-							nodeDef, _, err := apps.Node.LoadAppDefinition()
-							util.AssertEE(err, "Failed to load node definition!", constants.ExitAppConfigurationLoadFailed)
-							nodeUser, ok := nodeDef["user"].(string)
-							util.AssertBE(ok, "Failed to get username from node!", constants.ExitInvalidUser)
-							util.ChownR(nodeUser, path.Join(apps.Node.GetPath(), "data"))
-						}
-						if !wasSignerRunning && !cli.IsRemoteInstance {
-							apps.Signer.Stop()
-						}
-					}()
 				}
+				defer func() {
+					if isRemote := apps.DalNode.IsRemoteApp(); !isRemote {
+						dalDef, _, err := apps.DalNode.LoadAppDefinition()
+						util.AssertEE(err, "Failed to load node definition!", constants.ExitAppConfigurationLoadFailed)
+						dalUser, ok := dalDef["user"].(string)
+						util.AssertBE(ok, "Failed to get username from node!", constants.ExitInvalidUser)
+						util.ChownR(dalUser, path.Join(apps.DalNode.GetPath(), "data"))
+					}
+					if !wasSignerRunning && !cli.IsRemoteInstance {
+						apps.Signer.Stop()
+					}
+				}()
 
 				output, exitCode, err := apps.Node.ExecuteGetOutput("list-bakers")
 				util.AssertEE(err, "Failed to get baker key hash!", exitCode)
@@ -145,11 +143,8 @@ var setupSoftWalletCmd = &cobra.Command{
 				util.AssertEE(err, "Failed to set attester profiles!", constants.ExitAppConfigurationLoadFailed)
 
 				exitCode, err = apps.DalNode.Execute("setup", "--configure") // reconfigure to apply changes
-				util.AssertEE(err, "Failed to setup dal node!", exitCode)
-				if exitCode != 0 {
-					log.Error("Failed to setup dal node!")
-					return
-				}
+				util.AssertEE(err, "Failed to reconfigure dal node!", exitCode)
+				util.AssertBE(exitCode == 0, "Failed to setup dal node!", exitCode)
 				log.Info("Keys imported into dal node!")
 			}
 		}
@@ -157,9 +152,9 @@ var setupSoftWalletCmd = &cobra.Command{
 }
 
 func init() {
-	setupSoftWalletCmd.Flags().BoolP("node", "n", false, "Import key to node (affects import-key only)")
-	setupSoftWalletCmd.Flags().BoolP("signer", "s", false, "Import key to signer (affects import-key only)")
-	setupLedgerCmd.Flags().BoolP("dal", "d", false, "Import key to dal node (affects import-key only)")
+	setupSoftWalletCmd.Flags().Bool("node", false, "Import key to node (affects import-key only)")
+	setupSoftWalletCmd.Flags().Bool("signer", false, "Import key to signer (affects import-key only)")
+	setupSoftWalletCmd.Flags().Bool("dal", false, "Import key to dal node (affects import-key only)")
 
 	setupSoftWalletCmd.Flags().String("import-key", "", "Import key")
 	setupSoftWalletCmd.Flags().String("generate", "ed25519", "Generate key")

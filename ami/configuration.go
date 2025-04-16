@@ -80,6 +80,37 @@ func LoadAppConfiguration(app string) (map[string]interface{}, error) {
 	return nil, fmt.Errorf("failed to load '%s' configuration - unexpected format", app)
 }
 
+func UpdateAppConfiguration(app string, configuration map[string]interface{}) error {
+	appDef, err := LoadAppDefinition(app)
+	if err != nil {
+		return err
+	}
+	if _, ok := appDef["configuration"].(map[string]interface{}); !ok {
+		return fmt.Errorf("failed to load '%s' configuration - unexpected format", app)
+	}
+	appDef["configuration"] = configuration
+	return WriteAppDefinition(app, appDef, constants.DefaultAppJsonName)
+}
+
+func GetAppActiveModel(workingDir string) (map[string]interface{}, error) {
+	output, exitCode, err := ExecuteGetOutput(workingDir, "--print-model")
+	if err != nil {
+		return nil, err
+	}
+	if exitCode != 0 {
+		return nil, fmt.Errorf("failed to get active model - %s", output)
+	}
+	var model map[string]interface{}
+	err = hjson.Unmarshal([]byte(output), &model)
+	if err != nil {
+		return nil, err
+	}
+	if model == nil {
+		return nil, fmt.Errorf("failed to get active model - unexpected format")
+	}
+	return model, nil
+}
+
 func prepareFolderStructure(sshClient *ssh.Client, instancePath string, app string, user string, env *map[string]string) error {
 	workingDir := path.Join(instancePath, app)
 	log.Tracef("Preparing folder structure for remote %s...", workingDir)
@@ -106,8 +137,12 @@ func writeAppConfigurationToRemote(session *TezbakeRemoteSession, workingDir str
 	if err != nil || appDefPath == "" {
 		appDefPath = path.Join(workingDir, constants.DefaultAppJsonName)
 	}
-	err = session.writeFileToRemote(appDefPath, appDef, 0644)
-	if err != nil {
+	newAppDefPath := appDefPath + ".new"
+	if err = session.writeFileToRemote(newAppDefPath, appDef, 0644); err != nil {
+		return err
+	}
+
+	if err = session.sftpSession.Rename(newAppDefPath, appDefPath); err != nil {
 		return err
 	}
 
@@ -174,7 +209,12 @@ func WriteAppDefinition(workingDir string, configuration map[string]interface{},
 	if err != nil || appDefPath == "" {
 		appDefPath = path.Join(workingDir, appConfigPath)
 	}
-	return os.WriteFile(appDefPath, appDef, 0644)
+
+	newAppDefPath := appDefPath + ".new"
+	if err = os.WriteFile(newAppDefPath, appDef, 0644); err != nil {
+		return err
+	}
+	return os.Rename(newAppDefPath, appDefPath)
 }
 
 func ReadAppDefinition(workingDir string, appConfigPath string) (*map[string]interface{}, error) {

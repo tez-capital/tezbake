@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"os/user"
+	"regexp"
+	"strings"
 
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps"
@@ -41,6 +43,11 @@ const (
 	SetupAmi            = "setup-ami"
 	Force               = "force"
 	WithDal             = "with-dal"
+	DisablePostProcess  = "disable-post-process"
+)
+
+var (
+	schemeRegex = regexp.MustCompile(`^[a-z]+://`)
 )
 
 var setupCmd = &cobra.Command{
@@ -69,6 +76,7 @@ var setupCmd = &cobra.Command{
 
 		id := util.GetCommandStringFlagS(cmd, Id)
 		force := util.GetCommandBoolFlagS(cmd, Force)
+		disablePostProcess := util.GetCommandBoolFlagS(cmd, DisablePostProcess)
 		util.AssertBE(id != "", "Id not specified", constants.ExitInvalidId)
 		util.AssertBE(id != "bb-default" || cli.BBdir == constants.DefaultBBDirectory, "Please specify id for baker. 'default' id is allowed only for bake buddy installed in '"+constants.DefaultBBDirectory+"' path!", constants.ExitInvalidId)
 		cli.BBInstanceId = id
@@ -89,6 +97,7 @@ var setupCmd = &cobra.Command{
 		}
 
 		for _, v := range appsToProcess {
+			continue
 			appId := v.GetId()
 			if cli.IsRemoteInstance && !v.SupportsRemote() {
 				log.Debug(fmt.Sprintf("'%s' does not support remote. Skipping...", appId))
@@ -139,6 +148,66 @@ var setupCmd = &cobra.Command{
 			util.AssertEE(err, fmt.Sprintf("Failed to setup '%s'!", v.GetId()), exitCode)
 		}
 
+		// post setup - dal + node
+		if !disablePostProcess && apps.Node.IsInstalled() && apps.DalNode.IsInstalled() {
+			// link dal to node
+			nodeModel, err := apps.Node.GetActiveModel()
+			util.AssertEE(err, "Failed to load node definition!", constants.ExitActiveModelLoadFailed)
+			dalModel, err := apps.DalNode.GetActiveModel()
+			util.AssertEE(err, "Failed to load dal definition!", constants.ExitActiveModelLoadFailed)
+
+			nodeEndpoint, nodeEndpointFound := nodeModel["RPC_ADDR"].(string)
+			nodeDalEndpoint, _ := nodeModel["DAL_NODE"].(string)
+			dalEndpoint, dalEndpointFound := dalModel["RPC_ADDR"].(string)
+			dalNodeEndpoint, _ := dalModel["NODE_ENDPOINT"].(string)
+
+			util.AssertB(nodeEndpointFound, "Failed to get node endpoint!")
+			util.AssertB(dalEndpointFound, "Failed to get dal endpoint!")
+
+			// normalize
+			if !strings.HasPrefix(nodeEndpoint, "http") && !strings.HasPrefix(nodeEndpoint, "tcp") {
+				nodeEndpoint = "http://" + nodeEndpoint
+			}
+
+			if !strings.HasPrefix(dalEndpoint, "http") && !strings.HasPrefix(dalEndpoint, "tcp") {
+				dalEndpoint = "http://" + dalEndpoint
+			}
+			// check if dalNodeEndpoint equals nodeEndpoint with scheme
+
+			if dalNodeEndpoint != nodeEndpoint {
+				proceed := dalNodeEndpoint == "" // TODO: || force update
+				if !proceed && system.IsTty() {
+					prompt := &survey.Confirm{
+						Message: fmt.Sprintf("DAL - node endpoint '%s' is different from actual node endpoint '%s'. Do you want to update the DAL - node endpoint to match the actual node endpoint?", dalNodeEndpoint, nodeEndpoint),
+					}
+					survey.AskOne(prompt, &proceed)
+				}
+				if proceed {
+					log.Infof("Updating dal node endpoint to '%s'", nodeEndpoint)
+					util.AssertEE(apps.DalNode.UpdateNodeEndpoint(nodeEndpoint), "Failed to update dal node endpoint!", constants.ExitInternalError)
+					exitCode, err := apps.DalNode.Execute("setup", "--configure") // reconfigure to apply changes
+					util.AssertEE(err, "Failed to reconfigure dal node!", exitCode)
+					util.AssertBE(exitCode == 0, "Failed to setup dal node!", exitCode)
+				}
+			}
+			if nodeDalEndpoint != dalEndpoint {
+				proceed := nodeDalEndpoint == "" // TODO: || force update
+				if !proceed && system.IsTty() {
+					prompt := &survey.Confirm{
+						Message: fmt.Sprintf("NODE - dal endpoint '%s' is different from actual dal endpoint '%s'. Do you want to update the NODE - dal endpoint to match the actual dal endpoint?", nodeDalEndpoint, dalEndpoint),
+					}
+					survey.AskOne(prompt, &proceed)
+				}
+				if proceed {
+					log.Infof("Updating node dal endpoint to '%s'", dalEndpoint)
+					util.AssertEE(apps.Node.UpdateDalEndpoint(dalEndpoint), "Failed to update dal node endpoint!", constants.ExitInternalError)
+					exitCode, err := apps.Node.Execute("setup", "--configure") // reconfigure to apply changes
+					util.AssertEE(err, "Failed to reconfigure node!", exitCode)
+					util.AssertBE(exitCode == 0, "Failed to setup node!", exitCode)
+				}
+			}
+		}
+
 		util.ChownR(username, cli.BBdir)
 		log.Info("Setup successful")
 	},
@@ -175,6 +244,7 @@ func init() {
 	setupCmd.Flags().String(DalRemoteElevate, "", "only 'sudo' supported now (experimental)")
 
 	setupCmd.Flags().Bool(RemoteReset, false, "Resets and reconfigures remote node locator. (experimental)")
+	setupCmd.Flags().Bool(DisablePostProcess, false, "Disables post process - app linking node <-> dal.")
 
 	setupCmd.Flags().String(Branch, "main", "Select package release branch you want to setup (addets node and signer app only).")
 	RootCmd.AddCommand(setupCmd)
