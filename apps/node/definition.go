@@ -23,6 +23,11 @@ func (app *Node) UpdateDalEndpoint(endpoint string) error {
 		return err
 	}
 
-	config["DAL_NODE"] = endpoint
+	if endpoint != "" {
+		config["DAL_NODE"] = endpoint
+	} else {
+		delete(config, "DAL_NODE")
+	}
+
 	return ami.UpdateAppConfiguration(app.GetPath(), config)
 }

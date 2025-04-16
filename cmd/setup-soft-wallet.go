@@ -107,46 +107,44 @@ var setupSoftWalletCmd = &cobra.Command{
 
 		// TODO: merge with setup ledger and simplify
 		if (shouldOperateOnDal || !isAnySelected) && apps.DalNode.IsInstalled() {
-			if importKey.IsTrue() { // node only imports key
-				util.AssertBE(apps.Node.IsInstalled(), "node is not installed - can not import keys to dal node", constants.ExitAppNotInstalled)
+			util.AssertBE(apps.Node.IsInstalled(), "node is not installed - can not import keys to dal node", constants.ExitAppNotInstalled)
 
-				var wasSignerRunning bool
-				if !cli.IsRemoteInstance {
-					log.Info("Importing key to the node...")
-					wasSignerRunning, _ = apps.Signer.IsServiceStatus(constants.SignerAppServiceId, "running")
-					exitCode, err := apps.Signer.Start()
-					util.AssertEE(err, "Failed to start signer!", exitCode)
+			var wasSignerRunning bool
+			if !cli.IsRemoteInstance {
+				log.Info("Importing key to the node...")
+				wasSignerRunning, _ = apps.Signer.IsServiceStatus(constants.SignerAppServiceId, "running")
+				exitCode, err := apps.Signer.Start()
+				util.AssertEE(err, "Failed to start signer!", exitCode)
 
-					isSignerRunning, _ := apps.Signer.IsServiceStatus(constants.SignerAppServiceId, "running")
-					util.AssertBE(isSignerRunning, "Signer is not running. Please start signer services.", constants.ExitSignerNotOperational)
-				}
-				defer func() {
-					if isRemote := apps.DalNode.IsRemoteApp(); !isRemote {
-						dalDef, _, err := apps.DalNode.LoadAppDefinition()
-						util.AssertEE(err, "Failed to load node definition!", constants.ExitAppConfigurationLoadFailed)
-						dalUser, ok := dalDef["user"].(string)
-						util.AssertBE(ok, "Failed to get username from node!", constants.ExitInvalidUser)
-						util.ChownR(dalUser, path.Join(apps.DalNode.GetPath(), "data"))
-					}
-					if !wasSignerRunning && !cli.IsRemoteInstance {
-						apps.Signer.Stop()
-					}
-				}()
-
-				output, exitCode, err := apps.Node.ExecuteGetOutput("list-bakers")
-				util.AssertEE(err, "Failed to get baker key hash!", exitCode)
-				util.AssertB(exitCode == 0, "Failed to get baker key hash!")
-
-				keys := strings.Split(strings.TrimSpace(string(output)), "\n")
-
-				err = apps.DalNode.SetAttesterProfiles(keys)
-				util.AssertEE(err, "Failed to set attester profiles!", constants.ExitAppConfigurationLoadFailed)
-
-				exitCode, err = apps.DalNode.Execute("setup", "--configure") // reconfigure to apply changes
-				util.AssertEE(err, "Failed to reconfigure dal node!", exitCode)
-				util.AssertBE(exitCode == 0, "Failed to setup dal node!", exitCode)
-				log.Info("Keys imported into dal node!")
+				isSignerRunning, _ := apps.Signer.IsServiceStatus(constants.SignerAppServiceId, "running")
+				util.AssertBE(isSignerRunning, "Signer is not running. Please start signer services.", constants.ExitSignerNotOperational)
 			}
+			defer func() {
+				if isRemote := apps.DalNode.IsRemoteApp(); !isRemote {
+					dalDef, _, err := apps.DalNode.LoadAppDefinition()
+					util.AssertEE(err, "Failed to load node definition!", constants.ExitAppConfigurationLoadFailed)
+					dalUser, ok := dalDef["user"].(string)
+					util.AssertBE(ok, "Failed to get username from node!", constants.ExitInvalidUser)
+					util.ChownR(dalUser, path.Join(apps.DalNode.GetPath(), "data"))
+				}
+				if !wasSignerRunning && !cli.IsRemoteInstance {
+					apps.Signer.Stop()
+				}
+			}()
+
+			output, exitCode, err := apps.Node.ExecuteGetOutput("list-bakers")
+			util.AssertEE(err, "Failed to get baker key hash!", exitCode)
+			util.AssertB(exitCode == 0, "Failed to get baker key hash!")
+
+			keys := strings.Split(strings.TrimSpace(string(output)), "\n")
+
+			err = apps.DalNode.SetAttesterProfiles(keys)
+			util.AssertEE(err, "Failed to set attester profiles!", constants.ExitAppConfigurationLoadFailed)
+
+			exitCode, err = apps.DalNode.Execute("setup", "--configure") // reconfigure to apply changes
+			util.AssertEE(err, "Failed to reconfigure dal node!", exitCode)
+			util.AssertBE(exitCode == 0, "Failed to setup dal node!", exitCode)
+			log.Info("Keys imported into dal node!")
 		}
 	},
 }

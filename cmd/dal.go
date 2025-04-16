@@ -14,6 +14,9 @@ var dalCmd = &cobra.Command{
 	Long:               `Passes args through to dal node app.`,
 	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) > 0 && args[0] == "-" {
+			args[0] = "dal-node"
+		}
 		exitCode, _ := apps.DalNode.Execute(args...)
 		os.Exit(exitCode)
 	},

@@ -73,9 +73,11 @@ func GetAppsBySelectionCriteria(cmd *cobra.Command, criteria AppSelectionCriteri
 	}
 
 	selectedApps := make([]base.BakeBuddyApp, 0, len(initialApps))
+	anyAppSelected := false
 	for _, app := range initialApps {
 		if checked, _ := cmd.Flags().GetBool(app.GetId()); checked {
 			selectedApps = append(selectedApps, app)
+			anyAppSelected = true
 			continue
 		}
 
@@ -98,6 +100,10 @@ func GetAppsBySelectionCriteria(cmd *cobra.Command, criteria AppSelectionCriteri
 		default:
 			continue
 		}
+	}
+	if !anyAppSelected && criteria.InitialSelection == InstalledApps {
+		// If no apps were selected and the initial selection was installed apps, we should return all installed apps.
+		selectedApps = initialApps
 	}
 
 	if len(selectedApps) == 0 {

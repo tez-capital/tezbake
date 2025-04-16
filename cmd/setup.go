@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 	"os/user"
-	"regexp"
 	"strings"
 
+	"github.com/samber/lo"
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps"
 	"github.com/tez-capital/tezbake/cli"
@@ -44,10 +44,6 @@ const (
 	Force               = "force"
 	WithDal             = "with-dal"
 	DisablePostProcess  = "disable-post-process"
-)
-
-var (
-	schemeRegex = regexp.MustCompile(`^[a-z]+://`)
 )
 
 var setupCmd = &cobra.Command{
@@ -93,11 +89,10 @@ var setupCmd = &cobra.Command{
 		})
 
 		if withDal := util.GetCommandBoolFlagS(cmd, WithDal); withDal {
-			appsToProcess = append(appsToProcess, apps.DalNode)
+			appsToProcess = lo.Uniq(append(appsToProcess, apps.DalNode))
 		}
 
 		for _, v := range appsToProcess {
-			continue
 			appId := v.GetId()
 			if cli.IsRemoteInstance && !v.SupportsRemote() {
 				log.Debug(fmt.Sprintf("'%s' does not support remote. Skipping...", appId))
@@ -146,6 +141,26 @@ var setupCmd = &cobra.Command{
 
 			exitCode, err := v.Setup(ctx)
 			util.AssertEE(err, fmt.Sprintf("Failed to setup '%s'!", v.GetId()), exitCode)
+		}
+
+		if !disablePostProcess && apps.Node.IsInstalled() && !apps.DalNode.IsInstalled() {
+			nodeModel, err := apps.Node.GetActiveModel()
+			util.AssertEE(err, "Failed to load node definition!", constants.ExitActiveModelLoadFailed)
+
+			_, found := nodeModel["DAL_NODE"].(string)
+			if found {
+				proceed := false
+				if system.IsTty() {
+					prompt := &survey.Confirm{
+						Message: "DAL_NODE is set in node definition but no dal node found. Do you want to remove it?",
+					}
+					survey.AskOne(prompt, &proceed)
+				}
+				if proceed {
+					log.Infof("Removing dal node endpoint from node definition")
+					apps.Node.UpdateDalEndpoint("")
+				}
+			}
 		}
 
 		// post setup - dal + node
