@@ -2,6 +2,7 @@ package apps
 
 import (
 	"github.com/tez-capital/tezbake/apps/base"
+	"github.com/tez-capital/tezbake/apps/dal"
 	"github.com/tez-capital/tezbake/apps/node"
 	"github.com/tez-capital/tezbake/apps/pay"
 	"github.com/tez-capital/tezbake/apps/peak"
@@ -9,12 +10,13 @@ import (
 )
 
 var (
-	Node   = node.FromPath("")
-	Signer = signer.FromPath("")
-	Peak   = peak.FromPath("")
-	Pay    = pay.FromPath("")
-	All    = []base.BakeBuddyApp{
-		Node, Signer, Peak, Pay,
+	Node    = node.FromPath("")
+	DalNode = dal.FromPath("")
+	Signer  = signer.FromPath("")
+	Peak    = peak.FromPath("")
+	Pay     = pay.FromPath("")
+	All     = []base.BakeBuddyApp{
+		Node, Signer, DalNode, Peak, Pay,
 	}
 	Implicit = []base.BakeBuddyApp{
 		Node, Signer,
@@ -25,6 +27,7 @@ type SetupContext = base.SetupContext
 type UpgradeContext = base.UpgradeContext
 
 type NodeInfoCollectionOptions = node.InfoCollectionOptions
+type DalNodeInfoCollectionOptions = dal.InfoCollectionOptions
 type SignerInfoCollectionOptions = signer.InfoCollectionOptions
 
 func GetInstalledApps() []base.BakeBuddyApp {
@@ -39,6 +42,10 @@ func GetInstalledApps() []base.BakeBuddyApp {
 
 func NodeFromPath(path string) *node.Node {
 	return node.FromPath(path)
+}
+
+func DalNodeFromPath(path string) *dal.DalNode {
+	return dal.FromPath(path)
 }
 
 func SignerFromPath(path string) *signer.Signer {

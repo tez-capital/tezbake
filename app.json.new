@@ -1,0 +1,12 @@
+{
+	"configuration": {
+		"DAL_NODE": "http://127.0.0.1:10732",
+		"NODE_TYPE": "baker"
+	},
+	"id": "bb-default-node",
+	"type": {
+		"id": "xtz.node",
+		"version": "latest"
+	},
+	"user": "v"
+}

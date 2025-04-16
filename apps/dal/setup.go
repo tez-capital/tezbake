@@ -1,8 +1,9 @@
-package node
+package dal
 
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps/base"
@@ -26,11 +27,11 @@ func promptReuseElevateCredentials() bool {
 	return response
 }
 
-func (app *Node) GetSetupKind() string {
+func (app *DalNode) GetSetupKind() string {
 	return base.MergingSetupKind
 }
 
-func (app *Node) Setup(ctx *base.SetupContext, args ...string) (int, error) {
+func (app *DalNode) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 	if isRemote, _ := ami.IsRemoteApp(app.GetPath()); isRemote {
 		log.Warn("Found remote node locator. Setup will run on remote.")
 	}
@@ -40,7 +41,7 @@ func (app *Node) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 			config := ctx.ToRemoteConfiguration(app)
 			useExistingCredentials := false
 			if err == nil && !ctx.RemoteReset {
-				log.Info("Old node remote locator found. Merging...")
+				log.Info("Old dal remote locator found. Merging...")
 				config.PopulateWith(locator)
 				useExistingCredentials = promptReuseElevateCredentials()
 			}
@@ -55,7 +56,7 @@ func (app *Node) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 				case ami.REMOTE_ELEVATION_SUDO:
 					remoteElevatePassword := ""
 					prompt := &survey.Password{
-						Message: "Enter password to use for elevation on node remote:",
+						Message: "Enter password to use for elevation on dal remote:",
 					}
 					err = survey.AskOne(prompt, &remoteElevatePassword)
 					util.AssertE(err, "Remote elevate requires password!")
@@ -104,4 +105,13 @@ func (app *Node) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 	}
 
 	return ami.SetupApp(app.GetPath(), args...)
+}
+
+func (app *DalNode) SetAttesterProfiles(keys []string) error {
+	if isRemote, _ := ami.IsRemoteApp(app.GetPath()); isRemote {
+		log.Warn("Found remote node locator. Setup will run on remote.")
+	}
+
+	rawAttesterProfiles := strings.Join(keys, "\n")
+	return ami.WriteFile(app.GetPath(), []byte(rawAttesterProfiles), constants.AttesterProfilesFile)
 }

@@ -1,4 +1,4 @@
-package pay
+package dal
 
 import (
 	"encoding/json"
@@ -20,6 +20,7 @@ type Info struct {
 	Services map[string]base.AmiServiceInfo `json:"services"`
 	Type     string                         `json:"type"`
 	Version  string                         `json:"version"`
+	IsRemote bool                           `json:"isRemote"`
 }
 
 func (i *Info) UnmarshalJSON(data []byte) error {
@@ -44,24 +45,35 @@ func (i *Info) UnmarshalJSON(data []byte) error {
 type InfoCollectionOptions struct {
 	Timeout  int
 	Services bool
+	Dal      bool
 }
 
 func (infoCollectionOptions *InfoCollectionOptions) toAmiArgs() []string {
 	args := make([]string, 0)
+	if infoCollectionOptions.Timeout > 0 {
+		args = append(args, fmt.Sprintf("--timeout=%d", infoCollectionOptions.Timeout))
+	}
+
+	if infoCollectionOptions.Services {
+		args = append(args, "--services")
+	}
+	if infoCollectionOptions.Dal {
+		args = append(args, "--dal")
+	}
 	return args
 }
 
 func (nico *InfoCollectionOptions) All() bool {
-	return true
+	return !nico.Services
 }
 
-func (app *Tezpay) getInfoCollectionOptions(optionsJson []byte) *InfoCollectionOptions {
+func (app *DalNode) getInfoCollectionOptions(optionsJson []byte) *InfoCollectionOptions {
 	result := &InfoCollectionOptions{}
 	json.Unmarshal(optionsJson, result)
 	return result
 }
 
-func (app *Tezpay) GetAvailableInfoCollectionOptions() []base.AmiInfoCollectionOption {
+func (app *DalNode) GetAvailableInfoCollectionOptions() []base.AmiInfoCollectionOption {
 	result := make([]base.AmiInfoCollectionOption, 0)
 	options := InfoCollectionOptions{}
 	val := reflect.ValueOf(options)
@@ -75,7 +87,7 @@ func (app *Tezpay) GetAvailableInfoCollectionOptions() []base.AmiInfoCollectionO
 	return result
 }
 
-func (app *Tezpay) GetInfoFromOptions(options *InfoCollectionOptions) (Info, error) {
+func (app *DalNode) GetInfoFromOptions(options *InfoCollectionOptions) (Info, error) {
 	args := options.toAmiArgs()
 	infoBytes, _, err := ami.ExecuteInfo(app.GetPath(), args...)
 	if err != nil {
@@ -86,17 +98,18 @@ func (app *Tezpay) GetInfoFromOptions(options *InfoCollectionOptions) (Info, err
 	}
 
 	info, err := base.ParseInfoOutput[Info](infoBytes)
+	info.IsRemote, _ = ami.IsRemoteApp(app.GetPath())
 	if err != nil {
 		return Info{InfoBase: base.GenerateFailedInfo(string(infoBytes), err)}, err
 	}
-	return info, nil
+	return info, err
 }
 
-func (app *Tezpay) GetInfo(optionsJson []byte) (any, error) {
+func (app *DalNode) GetInfo(optionsJson []byte) (any, error) {
 	return app.GetInfoFromOptions(app.getInfoCollectionOptions(optionsJson))
 }
 
-func (app *Tezpay) GetServiceInfo() (map[string]base.AmiServiceInfo, error) {
+func (app *DalNode) GetServiceInfo() (map[string]base.AmiServiceInfo, error) {
 	result := map[string]base.AmiServiceInfo{}
 
 	info, err := app.GetInfoFromOptions(&InfoCollectionOptions{Services: true})
@@ -107,46 +120,46 @@ func (app *Tezpay) GetServiceInfo() (map[string]base.AmiServiceInfo, error) {
 	return info.Services, err
 }
 
-func (app *Tezpay) IsServiceStatus(id string, status string) (bool, error) {
+func (app *DalNode) IsServiceStatus(id string, status string) (bool, error) {
 	serviceInfo, err := app.GetServiceInfo()
 	if err != nil {
 		return false, err
 	}
-	if service, ok := serviceInfo[constants.TezpayAppServiceId]; ok && service.Status == status {
+	if service, ok := serviceInfo[constants.DalAppServiceId]; ok && service.Status == status {
 		return true, nil
 	}
 	return false, nil
 }
 
-func (app *Tezpay) PrintInfo(optionsJson []byte) error {
-	tezpayInfoRaw, err := app.GetInfo(optionsJson)
+func (app *DalNode) PrintInfo(optionsJson []byte) error {
+	dalInfoRaw, err := app.GetInfo(optionsJson)
 	if err != nil {
 		return err
 	}
-	tezpayInfo, ok := tezpayInfoRaw.(Info)
+	dalInfo, ok := dalInfoRaw.(Info)
 	if !ok {
 		return fmt.Errorf("invalid tezpay info type")
 	}
 
-	tezpayTable := table.NewWriter()
-	tezpayTable.SetStyle(table.StyleLight)
-	tezpayTable.SetColumnConfigs([]table.ColumnConfig{{Number: 1, Align: text.AlignLeft}, {Number: 2, Align: text.AlignLeft}})
-	tezpayTable.SetOutputMirror(os.Stdout)
-	tezpayTable.AppendHeader(table.Row{app.GetLabel(), app.GetLabel()}, table.RowConfig{AutoMerge: true})
+	dalTable := table.NewWriter()
+	dalTable.SetStyle(table.StyleLight)
+	dalTable.SetColumnConfigs([]table.ColumnConfig{{Number: 1, Align: text.AlignLeft}, {Number: 2, Align: text.AlignLeft}})
+	dalTable.SetOutputMirror(os.Stdout)
+	dalTable.AppendHeader(table.Row{app.GetLabel(), app.GetLabel()}, table.RowConfig{AutoMerge: true})
 
-	tezpayTable.AppendRow(table.Row{"Status", tezpayInfo.Status})
-	tezpayTable.AppendRow(table.Row{"Status Level", tezpayInfo.Level})
+	dalTable.AppendRow(table.Row{"Status", dalInfo.Status})
+	dalTable.AppendRow(table.Row{"Status Level", dalInfo.Level})
 
-	tezpayTable.AppendSeparator()
-	tezpayTable.AppendRow(table.Row{"Services", "Services"}, table.RowConfig{AutoMerge: true})
-	tezpayTable.AppendSeparator()
-	tezpayTable.AppendRow(table.Row{"Name", "Status (Started)"})
-	tezpayTable.AppendSeparator()
+	dalTable.AppendSeparator()
+	dalTable.AppendRow(table.Row{"Services", "Services"}, table.RowConfig{AutoMerge: true})
+	dalTable.AppendSeparator()
+	dalTable.AppendRow(table.Row{"Name", "Status (Started)"})
+	dalTable.AppendSeparator()
 
-	for k, v := range tezpayInfo.Services {
-		tezpayTable.AppendRow(table.Row{k, fmt.Sprintf("%v (%v)", v.Status, v.Started)})
+	for k, v := range dalInfo.Services {
+		dalTable.AppendRow(table.Row{k, fmt.Sprintf("%v (%v)", v.Status, v.Started)})
 	}
 
-	tezpayTable.Render()
+	dalTable.Render()
 	return nil
 }

@@ -1,4 +1,4 @@
-package node
+package dal
 
 import (
 	"path"
@@ -10,24 +10,13 @@ import (
 	"github.com/tez-capital/tezbake/util"
 )
 
-func (app *Node) UpgradeStorage() (int, error) {
-	upgradeStorageArgs := make([]string, 0)
-	upgradeStorageArgs = append(upgradeStorageArgs, "node", "upgrade", "storage")
-	exitCode, err := ami.Execute(app.GetPath(), upgradeStorageArgs...)
-	if err != nil {
-		return exitCode, err
-	}
-
-	return 0, nil
-}
-
-func (app *Node) Upgrade(ctx *base.UpgradeContext, args ...string) (int, error) {
+func (app *DalNode) Upgrade(ctx *base.UpgradeContext, args ...string) (int, error) {
 	isRemote, locator := ami.IsRemoteApp(app.GetPath())
 	if isRemote {
 		ami.PrepareRemote(app.GetPath(), locator, system.SSH_MODE_KEY)
 	}
 
-	wasRunning, _ := app.IsServiceStatus(constants.NodeAppServiceId, "running")
+	wasRunning, _ := app.IsServiceStatus(constants.DalAppServiceId, "running")
 	if !isRemote && wasRunning {
 		exitCode, err := app.Stop()
 		if err != nil {
@@ -37,12 +26,6 @@ func (app *Node) Upgrade(ctx *base.UpgradeContext, args ...string) (int, error) 
 	exitCode, err := ami.SetupApp(app.GetPath(), args...)
 	if err != nil {
 		return exitCode, err
-	}
-	if ctx.UpgradeStorage {
-		exitCode, err = app.UpgradeStorage()
-		if err != nil {
-			return exitCode, err
-		}
 	}
 	if !isRemote {
 		user := app.GetUser()

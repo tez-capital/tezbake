@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"path"
+	"strings"
 
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps"
@@ -29,11 +30,14 @@ var setupLedgerCmd = &cobra.Command{
 
 		shouldOperateOnSigner, _ := cmd.Flags().GetBool("signer")
 		shouldOperateOnNode, _ := cmd.Flags().GetBool("node")
+		shouldOperateOnDal, _ := cmd.Flags().GetBool("dal")
 		force, _ := cmd.Flags().GetBool("force")
 		keyAlias, _ := cmd.Flags().GetString("key-alias")
 		protocol, _ := cmd.Flags().GetString("protocol")
 
-		if (shouldOperateOnSigner || !shouldOperateOnNode) && !cli.IsRemoteInstance && apps.Signer.IsInstalled() {
+		isAnySelected := shouldOperateOnSigner || shouldOperateOnNode || shouldOperateOnDal
+
+		if (shouldOperateOnSigner || !isAnySelected) && !cli.IsRemoteInstance && apps.Signer.IsInstalled() {
 			log.Info("setting up ledger for signer...")
 			wasRunning, _ := apps.Signer.IsServiceStatus(constants.SignerAppServiceId, "running")
 			if wasRunning {
@@ -103,7 +107,7 @@ var setupLedgerCmd = &cobra.Command{
 			}
 		}
 
-		if (shouldOperateOnNode || !shouldOperateOnSigner) && apps.Node.IsInstalled() {
+		if (shouldOperateOnNode || !isAnySelected) && apps.Node.IsInstalled() {
 			if importKey.IsTrue() { // node only imports key
 				var wasSignerRunning bool
 				if !cli.IsRemoteInstance {
@@ -115,6 +119,18 @@ var setupLedgerCmd = &cobra.Command{
 					isSignerRunning, _ := apps.Signer.IsServiceStatus(constants.SignerAppServiceId, "running")
 					util.AssertBE(isSignerRunning, "Signer is not running. Please start signer services.", constants.ExitSignerNotOperational)
 				}
+				defer func() {
+					if isRemote := apps.Node.IsRemoteApp(); !isRemote {
+						nodeDef, _, err := apps.Node.LoadAppDefinition()
+						util.AssertEE(err, "Failed to load node definition!", constants.ExitAppConfigurationLoadFailed)
+						nodeUser, ok := nodeDef["user"].(string)
+						util.AssertBE(ok, "Failed to get username from node!", constants.ExitInvalidUser)
+						util.ChownR(nodeUser, path.Join(apps.Node.GetPath(), "data"))
+					}
+					if !wasSignerRunning && !cli.IsRemoteInstance {
+						apps.Signer.Stop()
+					}
+				}()
 
 				bakerAddr, exitCode, err := apps.Signer.GetKeyHash(keyAlias)
 				util.AssertEE(err, "Failed to get baker key hash!", exitCode)
@@ -127,24 +143,58 @@ var setupLedgerCmd = &cobra.Command{
 				exitCode, err = apps.Node.Execute(amiArgs...)
 				util.AssertEE(err, "Failed to import key to node!", exitCode)
 
-				if isRemote := apps.Node.IsRemoteApp(); !isRemote {
-					nodeDef, _, err := apps.Node.LoadAppDefinition()
-					util.AssertEE(err, "Failed to load node definition!", constants.ExitAppConfigurationLoadFailed)
-					nodeUser, ok := nodeDef["user"].(string)
-					util.AssertBE(ok, "Failed to get username from node!", constants.ExitInvalidUser)
-					util.ChownR(nodeUser, path.Join(apps.Node.GetPath(), "data"))
+			}
+		}
+
+		if (shouldOperateOnDal || !isAnySelected) && apps.DalNode.IsInstalled() {
+			if importKey.IsTrue() { // node only imports key
+				util.AssertBE(apps.Node.IsInstalled(), "node is not installed - can not import keys to dal node", constants.ExitAppNotInstalled)
+
+				var wasSignerRunning bool
+				if !cli.IsRemoteInstance {
+					log.Info("Importing key to the node...")
+					wasSignerRunning, _ = apps.Signer.IsServiceStatus(constants.SignerAppServiceId, "running")
+					exitCode, err := apps.Signer.Start()
+					util.AssertEE(err, "Failed to start signer!", exitCode)
+
+					isSignerRunning, _ := apps.Signer.IsServiceStatus(constants.SignerAppServiceId, "running")
+					util.AssertBE(isSignerRunning, "Signer is not running. Please start signer services.", constants.ExitSignerNotOperational)
 				}
-				if !wasSignerRunning && !cli.IsRemoteInstance {
-					apps.Signer.Stop()
-				}
+				defer func() {
+					if isRemote := apps.DalNode.IsRemoteApp(); !isRemote {
+						dalDef, _, err := apps.DalNode.LoadAppDefinition()
+						util.AssertEE(err, "Failed to load node definition!", constants.ExitAppConfigurationLoadFailed)
+						dalUser, ok := dalDef["user"].(string)
+						util.AssertBE(ok, "Failed to get username from node!", constants.ExitInvalidUser)
+						util.ChownR(dalUser, path.Join(apps.DalNode.GetPath(), "data"))
+					}
+					if !wasSignerRunning && !cli.IsRemoteInstance {
+						apps.Signer.Stop()
+					}
+				}()
+
+				output, exitCode, err := apps.Node.ExecuteGetOutput("list-bakers")
+				util.AssertEE(err, "Failed to get baker key hash!", exitCode)
+				util.AssertB(exitCode == 0, "Failed to get baker key hash!")
+
+				keys := strings.Split(strings.TrimSpace(string(output)), "\n")
+
+				err = apps.DalNode.SetAttesterProfiles(keys)
+				util.AssertEE(err, "Failed to set attester profiles!", constants.ExitAppConfigurationLoadFailed)
+
+				exitCode, err = apps.DalNode.Execute("setup", "--configure") // reconfigure to apply changes
+				util.AssertEE(err, "Failed to setup dal node!", exitCode)
+				util.AssertBE(exitCode == 0, "Failed to setup dal node!", exitCode)
+				log.Info("Keys imported into dal node!")
 			}
 		}
 	},
 }
 
 func init() {
-	setupLedgerCmd.Flags().BoolP("node", "n", false, "Import key to node (affects import-key only)")
-	setupLedgerCmd.Flags().BoolP("signer", "s", false, "Import key to signer (affects import-key only)")
+	setupLedgerCmd.Flags().Bool("node", false, "Import key to node (affects import-key only)")
+	setupLedgerCmd.Flags().Bool("signer", false, "Import key to signer (affects import-key only)")
+	setupLedgerCmd.Flags().Bool("dal", false, "Import key to dal node (affects import-key only)")
 
 	importKey = addCombinedFlag(setupLedgerCmd, "import-key", "", "Import key from ledger (optionally specify derivation path)")
 	setupLedgerCmd.Flags().String("ledger-id", "", "Ledger id to import key from (affects import-key only)")

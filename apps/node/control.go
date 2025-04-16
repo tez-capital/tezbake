@@ -17,3 +17,7 @@ func (app *Node) Remove(all bool, args ...string) (int, error) {
 func (app *Node) Execute(args ...string) (int, error) {
 	return ami.Execute(app.GetPath(), args...)
 }
+
+func (app *Node) ExecuteGetOutput(args ...string) (string, int, error) {
+	return ami.ExecuteGetOutput(app.GetPath(), args...)
+}

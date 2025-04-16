@@ -1,8 +1,11 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 	"github.com/tez-capital/tezbake/ami"
+	"github.com/tez-capital/tezbake/constants"
 )
 
 var utilsCmd = &cobra.Command{
@@ -21,8 +24,9 @@ var createRemoteCredentialsFileCmd = &cobra.Command{
 		kind, _ := cmd.Flags().GetString("kind")
 
 		switch ami.RemoteElevationKind(kind) {
-		case ami.REMOTE_ELEVATION_SU:
 		case ami.REMOTE_ELEVATION_SUDO:
+		case ami.REMOTE_ELEVATION_SU:
+			os.Exit(constants.ExitNotSupported)
 		default:
 			panic("Invalid kind of elevation.")
 		}

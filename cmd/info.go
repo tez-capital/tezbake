@@ -30,7 +30,6 @@ var infoCmd = &cobra.Command{
 			FallbackSelection: ImplicitApps,
 			OptionCheckType:   InfoOptionCheck,
 		}) {
-
 			options := map[string]interface{}{
 				"timeout": timeout,
 			}
