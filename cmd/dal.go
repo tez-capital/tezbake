@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/tez-capital/tezbake/apps"
+	"github.com/tez-capital/tezbake/util"
 
 	"github.com/spf13/cobra"
 )
@@ -13,7 +14,8 @@ var dalCmd = &cobra.Command{
 	Short:              "Passes args through to dal node app.",
 	Long:               `Passes args through to dal node app.`,
 	DisableFlagParsing: true,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
+		args := util.GetCommandArgs(cmd)
 		if len(args) > 0 && args[0] == "-" {
 			args[0] = "dal-node"
 		}

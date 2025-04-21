@@ -1,6 +1,10 @@
 package util
 
-import "github.com/spf13/cobra"
+import (
+	"os"
+
+	"github.com/spf13/cobra"
+)
 
 func GetCommandStringFlag(cmd *cobra.Command, flag string) string {
 	value, err := cmd.Flags().GetString(flag)
@@ -38,4 +42,17 @@ func GetCommandStringFlagSD(cmd *cobra.Command, flag string, def string) string 
 func GetCommandBoolFlagS(cmd *cobra.Command, flag string) bool {
 	value, _ := cmd.Flags().GetBool(flag)
 	return value
+}
+
+// GetCommandArgs retrieves the arguments specified after the command.
+// It returns nil if no arguments are provided.
+func GetCommandArgs(cmd *cobra.Command) []string {
+	args := os.Args
+	for i, arg := range os.Args {
+		if arg == cmd.Use {
+			return args[i+1:]
+		}
+	}
+
+	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/tez-capital/tezbake/apps"
+	"github.com/tez-capital/tezbake/util"
 
 	"github.com/spf13/cobra"
 )
@@ -13,7 +14,8 @@ var payCmd = &cobra.Command{
 	Short:              "Passes args through to tezpay app.",
 	Long:               `Passes args through to tezpay app.`,
 	DisableFlagParsing: true,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
+		args := util.GetCommandArgs(cmd)
 		exitCode, _ := apps.Pay.Execute(args...)
 		os.Exit(exitCode)
 	},
