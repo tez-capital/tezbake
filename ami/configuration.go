@@ -142,7 +142,7 @@ func writeAppConfigurationToRemote(session *TezbakeRemoteSession, workingDir str
 		return err
 	}
 
-	if err = session.sftpSession.Rename(newAppDefPath, appDefPath); err != nil {
+	if err = session.sftpSession.PosixRename(newAppDefPath, appDefPath); err != nil {
 		return err
 	}
 

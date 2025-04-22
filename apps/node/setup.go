@@ -78,7 +78,7 @@ func (app *Node) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 			// 	ctx.User = ctx.RemoteUser
 			// }
 
-			if ctx.RemoteElevate != ami.REMOTE_ELEVATION_NONE {
+			if ctx.RemoteElevate != ami.REMOTE_ELEVATION_NONE && locator != nil {
 				// override with username we use to connect to remote
 				// se we do not have to prompt for elevation when collecting info and other common tasks
 				ctx.User = locator.Username

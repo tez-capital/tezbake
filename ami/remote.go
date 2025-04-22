@@ -1,6 +1,7 @@
 package ami
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
@@ -311,7 +312,6 @@ func getRemoteArchitecture(client *ssh.Client) (string, error) {
 		return "unknown", nil
 	}
 }
-
 func executePreparationStage(config *RemoteConfiguration, mode string, key []byte) {
 	log.Info("Preparing remote...")
 	sshClient, sftp := system.OpenSshSession(config.ToSshConnectionDetails(), mode, key)
@@ -324,7 +324,13 @@ func executePreparationStage(config *RemoteConfiguration, mode string, key []byt
 	util.AssertE(err, "Failed to get remote architecture!")
 	bbCliForRemoteFile := "tezbake-for-remote"
 
-	url := fmt.Sprintf(constants.DefaultBbCliUrl, platform)
+	// TODO: macos
+	binaryName := fmt.Sprintf("tezbake-%s-%s", "linux", platform)
+	release, err := util.FetchGithubRelease(context.Background(), true, "latest")
+	util.AssertE(err, "failed to fetch tezbake release")
+	url, _, err := release.FindAsset(binaryName)
+	util.AssertE(err, "failed to find tezbake asset in github release")
+
 	log.Trace(fmt.Sprintf("Downloading and installing tezbake (%s) for remote...", url))
 	// download tezbake for remote
 

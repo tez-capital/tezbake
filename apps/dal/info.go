@@ -17,10 +17,11 @@ import (
 
 type Info struct {
 	base.InfoBase
-	Services map[string]base.AmiServiceInfo `json:"services"`
-	Type     string                         `json:"type"`
-	Version  string                         `json:"version"`
-	IsRemote bool                           `json:"isRemote"`
+	Services         map[string]base.AmiServiceInfo `json:"services"`
+	Type             string                         `json:"type"`
+	Version          string                         `json:"version"`
+	AttesterProfiles []string                       `json:"attester_profiles"`
+	IsRemote         bool                           `json:"isRemote"`
 }
 
 func (i *Info) UnmarshalJSON(data []byte) error {
@@ -159,6 +160,15 @@ func (app *DalNode) PrintInfo(optionsJson []byte) error {
 	for k, v := range dalInfo.Services {
 		dalTable.AppendRow(table.Row{k, fmt.Sprintf("%v (%v)", v.Status, v.Started)})
 	}
+
+	dalTable.AppendRow(table.Row{"Attester Profiles", "Attester Profiles"}, table.RowConfig{AutoMerge: true})
+	if len(dalInfo.AttesterProfiles) == 0 {
+		dalInfo.AttesterProfiles = []string{"-"}
+	}
+	for _, profile := range dalInfo.AttesterProfiles {
+		dalTable.AppendRow(table.Row{profile, profile}, table.RowConfig{AutoMerge: true})
+	}
+	dalTable.AppendSeparator()
 
 	dalTable.Render()
 	return nil

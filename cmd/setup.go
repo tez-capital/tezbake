@@ -164,12 +164,12 @@ var setupCmd = &cobra.Command{
 		}
 
 		// post setup - dal + node
-		if !disablePostProcess && apps.Node.IsInstalled() && apps.DalNode.IsInstalled() {
+		if !cli.IsRemoteInstance && !disablePostProcess && apps.Node.IsInstalled() && apps.DalNode.IsInstalled() {
 			// link dal to node
 			nodeModel, err := apps.Node.GetActiveModel()
-			util.AssertEE(err, "Failed to load node definition!", constants.ExitActiveModelLoadFailed)
+			util.AssertEE(err, "Failed to load node active mode!", constants.ExitActiveModelLoadFailed)
 			dalModel, err := apps.DalNode.GetActiveModel()
-			util.AssertEE(err, "Failed to load dal definition!", constants.ExitActiveModelLoadFailed)
+			util.AssertEE(err, "Failed to load dal active mode!", constants.ExitActiveModelLoadFailed)
 
 			nodeEndpoint, nodeEndpointFound := nodeModel["RPC_ADDR"].(string)
 			nodeDalEndpoint, _ := nodeModel["DAL_NODE"].(string)

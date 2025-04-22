@@ -1,12 +1,13 @@
 package constants
 
 const (
-	VERSION = "0.17.0-alpha"
+	VERSION = "0.17.0-alpha.1"
+
+	TezbakeRepository string = "tez-capital/tezbake"
 
 	DefaultBBDirectory string = "/bake-buddy"
 	DefaultRemoteUser  string = "bb"
 	DefaultSshUser     string = "root"
-	DefaultBbCliUrl    string = "https://raw.githubusercontent.com/tez-capital/tezbake-releases/main/tezbake-linux-%s"
 
 	DefaultAppJsonName string = "app.json"
 )
