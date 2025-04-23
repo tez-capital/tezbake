@@ -1,12 +1,14 @@
 package system
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
 	"net"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/tez-capital/tezbake/constants"
 	"github.com/tez-capital/tezbake/util"
@@ -188,6 +190,64 @@ func RunPipedSshCommand(client *ssh.Client, cmd string, env *map[string]string) 
 			exitCode = exitErr.ExitStatus()
 		}
 	}
+	return &SshCommandResult{
+		Error:    err,
+		ExitCode: exitCode,
+	}
+}
+
+func RunSshCommandWithOutputChannel(client *ssh.Client, cmd string, env *map[string]string, outputChannel chan<- string) *SshCommandResult {
+	session, err := client.NewSession()
+	if err != nil {
+		return &SshCommandResult{
+			Error:    err,
+			ExitCode: -1,
+		}
+	}
+	defer session.Close()
+	stdout, err := session.StdoutPipe()
+	if err != nil {
+		return &SshCommandResult{Error: err, ExitCode: -1}
+	}
+	stderr, err := session.StderrPipe()
+	if err != nil {
+		return &SshCommandResult{Error: err, ExitCode: -1}
+	}
+
+	var wg sync.WaitGroup
+	// Increment the WaitGroup counter for each goroutine
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		// feed the output channel with the output of the command
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			// Send each line of output to the channel
+			outputChannel <- scanner.Text()
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		// feed the output channel with the output of the command
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			// Send each line of output to the channel
+			outputChannel <- scanner.Text()
+		}
+	}()
+
+	cmd = buildUpEnv(env) + cmd
+
+	exitCode := 0
+
+	err = session.Run(cmd)
+	if err != nil {
+		exitCode = -1
+		if exitErr, ok := err.(*ssh.ExitError); ok {
+			exitCode = exitErr.ExitStatus()
+		}
+	}
+	wg.Wait()
 	return &SshCommandResult{
 		Error:    err,
 		ExitCode: exitCode,

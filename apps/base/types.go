@@ -58,6 +58,9 @@ type BBInstanceVersions struct {
 	RemoteCli     string                `json:"remote-cli"`
 	Node          *ami.InstanceVersions `json:"node"`
 	Signer        *ami.InstanceVersions `json:"signer"`
+	Dal           *ami.InstanceVersions `json:"dal"`
+	Peak          *ami.InstanceVersions `json:"peak"`
+	Pay           *ami.InstanceVersions `json:"pay"`
 	HasRemoteNode bool                  `json:"has-remote-node"`
 }
 

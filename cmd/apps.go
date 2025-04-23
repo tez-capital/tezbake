@@ -33,7 +33,7 @@ var appsCmd = &cobra.Command{
 			appsTable.AppendRow(table.Row{v.GetId(), isInstalled})
 		}
 
-		if cli.JsonLogFormat || cli.IsRemoteInstance {
+		if cli.JsonLogFormat {
 			data, err := json.Marshal(result)
 			util.AssertEE(err, "Failed to serialize apps info!", constants.ExitSerializationFailed)
 			fmt.Println(string(data))

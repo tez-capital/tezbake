@@ -13,7 +13,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/kballard/go-shellquote"
+	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
 	sshKey "github.com/tez-capital/tezbake/ssh"
 	"github.com/tez-capital/tezbake/system"
@@ -547,35 +547,115 @@ func runSshCommand(client *ssh.Client, cmd string, locator *RemoteConfiguration,
 	return result
 }
 
-func (session *TezbakeRemoteSession) ProxyToRemoteApp() (int, error) {
-	args := session.prepareArgsForProxy(true)
-	result := runSshCommand(session.sshClient, strings.Join(args, " "), session.locator, system.RunPipedSshCommand)
+func (session *TezbakeRemoteSession) prepareArgsForAmiForward(workingDir string, args []string) ([]string, error) {
+	forwardArgs := []string{"tezbake"}
+
+	remoteVarsWithValues := make([]string, 0)
+	for k, v := range REMOTE_VARS {
+		remoteVarsWithValues = append(remoteVarsWithValues, fmt.Sprintf("%s=%s", k, v))
+	}
+	if len(remoteVarsWithValues) > 0 {
+		forwardArgs = append(forwardArgs, fmt.Sprintf("--remote-instance-vars=%s", strings.Join(remoteVarsWithValues, ";")))
+	}
+
+	if session.instancePath != "" { // strip --path/-p
+		strippedArgs := make([]string, 0)
+		skip := false
+		for _, v := range args {
+			if skip {
+				skip = false
+				continue
+			}
+			if v == "-p" || v == "--path" {
+				skip = true
+				continue
+			}
+			if strings.HasPrefix(v, "-p=") || strings.HasPrefix(v, "--path=") {
+				continue
+			}
+			strippedArgs = append(strippedArgs, v)
+		}
+		args = strippedArgs
+		forwardArgs = append(forwardArgs, "--path", session.instancePath)
+	}
+
+	forwardArgs = append(forwardArgs, "execute-ami")
+	if cli.ElevationRequired {
+		forwardArgs = append(forwardArgs, "--elevate")
+	}
+
+	forwardArgs = append(forwardArgs, "--app", workingDir)
+
+	jsonEncodedArgs, err := json.Marshal(args)
+	if err != nil {
+		return nil, errors.Join(errors.New("failed to encode ami args"), err)
+	}
+
+	encodedArgs := base64.StdEncoding.EncodeToString(jsonEncodedArgs)
+	forwardArgs = append(forwardArgs, "--base64-args", encodedArgs)
+
+	return forwardArgs, nil
+}
+
+func (session *TezbakeRemoteSession) ForwardAmiExecute(workingDir string, args ...string) (int, error) {
+	forwardArgs, err := session.prepareArgsForAmiForward(workingDir, args)
+	if err != nil {
+		return -1, err
+	}
+
+	result := runSshCommand(session.sshClient, strings.Join(forwardArgs, " "), session.locator, system.RunPipedSshCommand)
 	return result.ExitCode, result.Error
 }
 
+func (session *TezbakeRemoteSession) ForwardAmiExecuteGetOutput(workingDir string, args ...string) (string, int, error) {
+	forwardArgs, err := session.prepareArgsForAmiForward(workingDir, args)
+	if err != nil {
+		return "", -1, err
+	}
+
+	result := runSshCommand(session.sshClient, strings.Join(forwardArgs, " "), session.locator, system.RunSshCommand)
+	return string(result.Stdout), result.ExitCode, result.Error
+}
+
+func (session *TezbakeRemoteSession) ForwardAmiExecuteWithOutputChannel(workingDir string, outputChannel chan<- string, args ...string) (int, error) {
+	forwardArgs, err := session.prepareArgsForAmiForward(workingDir, args)
+	if err != nil {
+		return -1, err
+	}
+
+	log.Debug("Entering remote land...")
+	defer log.Debug("Returning to homeland...")
+
+	client := session.sshClient
+	cmd := strings.Join(forwardArgs, " ")
+	locator := session.locator
+
+	log.Debug("remote executing: " + cmd)
+
+	result := system.RunSshCommandWithOutputChannel(client, cmd, nil, outputChannel)
+	if result.Error != nil && result.ExitCode == constants.ExitElevationRequired {
+		if locator.Elevate == REMOTE_ELEVATION_NONE {
+			return result.ExitCode, result.Error
+		}
+		elevationCredentials, err := locator.GetElevationCredentials()
+		if err != nil {
+			return result.ExitCode, result.Error
+		}
+		if elevationCredentials.Kind == REMOTE_ELEVATION_NONE {
+			return result.ExitCode, result.Error
+		}
+		result = system.RunSshCommandWithOutputChannel(client, cmd, elevationCredentials.ToEnvMap(), outputChannel)
+	}
+	return result.ExitCode, result.Error
+}
+
+// TODO: remove
 func (session *TezbakeRemoteSession) ProxyToRemoteAppGetOutput() (string, int, error) {
 	args := session.prepareArgsForProxy(false)
 
 	result := runSshCommand(session.sshClient, strings.Join(args, " "), session.locator, system.RunSshCommand)
 
 	return string(result.Stdout), result.ExitCode, result.Error
-}
-
-func (session *TezbakeRemoteSession) ProxyToRemoteAppExecuteInfo(args []string) ([]byte, int, error) {
-	args = append([]string{"ami"}, args...)
-
-	result := runSshCommand(session.sshClient, shellquote.Join(args...), session.locator, system.RunSshCommand)
-
-	return result.Stdout, result.ExitCode, result.Error
-}
-
-func (session *TezbakeRemoteSession) IsRemoteAppInstalled(id string) ([]byte, int, error) {
-	args := keepJustRootCmdArgs(session.prepareArgsForProxy(false))
-	args = append(args, "is-app-installed", id)
-
-	result := runSshCommand(session.sshClient, strings.Join(args, " "), session.locator, system.RunSshCommand)
-
-	return result.Stdout, result.ExitCode, result.Error
 }
 
 func (session *TezbakeRemoteSession) writeFileToRemote(fullPath string, content []byte, mode os.FileMode) error {

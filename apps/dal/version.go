@@ -16,8 +16,8 @@ func (app *DalNode) GetVersions(options *ami.CollectVersionsOptions) (*ami.Insta
 		}
 		result := &ami.InstanceVersions{
 			Cli:      bbCliVersions.Cli,
-			Packages: bbCliVersions.Node.Packages,
-			Binaries: bbCliVersions.Node.Binaries,
+			Packages: bbCliVersions.Dal.Packages,
+			Binaries: bbCliVersions.Dal.Binaries,
 			IsRemote: true,
 		}
 		return result, nil

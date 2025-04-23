@@ -160,8 +160,10 @@ func (app *DalNode) PrintInfo(optionsJson []byte) error {
 	for k, v := range dalInfo.Services {
 		dalTable.AppendRow(table.Row{k, fmt.Sprintf("%v (%v)", v.Status, v.Started)})
 	}
+	dalTable.AppendSeparator()
 
 	dalTable.AppendRow(table.Row{"Attester Profiles", "Attester Profiles"}, table.RowConfig{AutoMerge: true})
+	dalTable.AppendSeparator()
 	if len(dalInfo.AttesterProfiles) == 0 {
 		dalInfo.AttesterProfiles = []string{"-"}
 	}

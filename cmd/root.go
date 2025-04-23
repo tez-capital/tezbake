@@ -89,18 +89,15 @@ Copyright © 2023 tez.capital
 			}
 			log.Trace("Log level set to '" + cli.LogLevel + "'")
 
-			cli.IsRemoteInstance, _ = cmd.Flags().GetBool("remote-instance")
-			if cli.IsRemoteInstance {
-				remoteVars, _ := cmd.Flags().GetString("remote-instance-vars")
-				if remoteVars != "" {
-					vars := strings.Split(remoteVars, ";")
-					for _, _var := range vars {
-						kvPair := strings.Split(_var, "=")
-						if len(kvPair) != 2 {
-							continue
-						}
-						ami.REMOTE_VARS[kvPair[0]] = kvPair[1]
+			remoteVars, _ := cmd.Flags().GetString("remote-instance-vars")
+			if remoteVars != "" {
+				vars := strings.Split(remoteVars, ";")
+				for _, _var := range vars {
+					kvPair := strings.Split(_var, "=")
+					if len(kvPair) != 2 {
+						continue
 					}
+					ami.REMOTE_VARS[kvPair[0]] = kvPair[1]
 				}
 			}
 
@@ -129,9 +126,8 @@ Copyright © 2023 tez.capital
 
 			// init ami options
 			ami.SetOptions(ami.Options{
-				LogLevel:             cli.LogLevel,
-				JsonLogFormat:        cli.JsonLogFormat,
-				DoNotCheckForLocator: cli.IsRemoteInstance,
+				LogLevel:      cli.LogLevel,
+				JsonLogFormat: cli.JsonLogFormat,
 			})
 
 		},

@@ -5,13 +5,9 @@ import (
 	"strings"
 
 	"github.com/tez-capital/tezbake/ami"
-	"github.com/tez-capital/tezbake/cli"
 )
 
 func (app *Signer) GetKeyHash(alias string, args ...string) (string, int, error) {
-	if cli.IsRemoteInstance {
-		return ami.REMOTE_VARS[ami.BAKER_KEY_HASH_REMOTE_VAR], 0, nil
-	}
 	execArgs := make([]string, 0)
 	execArgs = append(execArgs, "get-key-hash")
 	execArgs = append(execArgs, fmt.Sprintf("--alias=%s", alias))

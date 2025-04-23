@@ -79,19 +79,6 @@ func (app *DalNode) IsRemoteApp() bool {
 }
 
 func (app *DalNode) IsInstalled() bool {
-	if isRemote, locator := ami.IsRemoteApp(app.GetPath()); isRemote {
-		session, err := locator.OpenAppRemoteSession()
-		if err != nil {
-			log.Warnf("Failed to check whether %s is installed on remote (%s)!", app.GetId(), err.Error())
-			return false
-		}
-		defer session.Close()
-
-		var output []byte
-		output, _, err = session.IsRemoteAppInstalled(app.GetId())
-
-		return err == nil && strings.Contains(string(output), "true")
-	}
 	return ami.IsAppInstalled(app.GetPath())
 }
 

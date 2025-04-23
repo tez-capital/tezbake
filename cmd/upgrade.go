@@ -5,7 +5,6 @@ import (
 
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps"
-	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
 
@@ -24,7 +23,7 @@ var upgradeCmd = &cobra.Command{
 			UpgradeStorage: util.GetCommandBoolFlagS(cmd, UpgradeStorage),
 		}
 
-		if util.GetCommandBoolFlagS(cmd, SetupAmi) || cli.IsRemoteInstance {
+		if util.GetCommandBoolFlagS(cmd, SetupAmi) {
 			// install ami by default in case of remote instance
 			exitCode, err := ami.Install()
 			util.AssertEE(err, "Failed to install ami and eli!", exitCode)

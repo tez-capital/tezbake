@@ -70,7 +70,7 @@ var versionCmd = &cobra.Command{
 			result[v.GetId()] = versions
 		}
 
-		if cli.JsonLogFormat || cli.IsRemoteInstance {
+		if cli.JsonLogFormat {
 			verInfo, err := json.Marshal(result)
 			util.AssertEE(err, "Failed to serialize version info!", constants.ExitSerializationFailed)
 			fmt.Print(string(verInfo))

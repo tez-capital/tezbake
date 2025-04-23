@@ -6,25 +6,27 @@ import (
 	"os/user"
 	"time"
 
+	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
 	"github.com/tez-capital/tezbake/util"
 
 	log "github.com/sirupsen/logrus"
 )
 
-func GetCurrentUser() *user.User {
+func getCurrentUser() *user.User {
 	user, err := user.Current()
 	util.AssertEE(err, "Failed to get current user!", constants.ExitInvalidUser)
 	return user
 }
 
-func IsElevated() bool {
-	user := GetCurrentUser()
+func isElevated() bool {
+	user := getCurrentUser()
 	return user.Uid == "0"
 }
 
 func RequireElevatedUser(injectArgs ...string) {
-	if IsElevated() {
+	cli.ElevationRequired = true
+	if isElevated() {
 		log.Trace("Process already elevated...")
 		return
 	} else {

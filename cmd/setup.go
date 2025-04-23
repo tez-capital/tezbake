@@ -52,12 +52,10 @@ var setupCmd = &cobra.Command{
 	Long:  "Installs and configures BB instance.",
 	Run: func(cmd *cobra.Command, args []string) {
 		username := util.GetCommandStringFlag(cmd, User)
-		if !system.IsElevated() {
-			system.RequireElevatedUser("--user=" + username)
-		}
+		system.RequireElevatedUser("--user=" + username)
 
 		util.AssertBE(username != "", "User not specified", constants.ExitInvalidUser)
-		if username == "root" && !cli.IsRemoteInstance {
+		if username == "root" {
 			proceed := false
 			if system.IsTty() {
 				prompt := &survey.Confirm{
@@ -77,7 +75,7 @@ var setupCmd = &cobra.Command{
 		util.AssertBE(id != "bb-default" || cli.BBdir == constants.DefaultBBDirectory, "Please specify id for baker. 'default' id is allowed only for bake buddy installed in '"+constants.DefaultBBDirectory+"' path!", constants.ExitInvalidId)
 		cli.BBInstanceId = id
 
-		if util.GetCommandBoolFlagS(cmd, SetupAmi) || cli.IsRemoteInstance {
+		if util.GetCommandBoolFlagS(cmd, SetupAmi) {
 			// install ami by default in case of remote instance
 			exitCode, err := ami.Install()
 			util.AssertEE(err, "Failed to install ami and eli!", exitCode)
@@ -94,7 +92,7 @@ var setupCmd = &cobra.Command{
 
 		for _, v := range appsToProcess {
 			appId := v.GetId()
-			if cli.IsRemoteInstance && !v.SupportsRemote() {
+			if !v.SupportsRemote() {
 				log.Debug(fmt.Sprintf("'%s' does not support remote. Skipping...", appId))
 				continue
 			}
@@ -126,7 +124,7 @@ var setupCmd = &cobra.Command{
 				ctx.RemoteElevate = ami.RemoteElevationKind(util.GetCommandStringFlagS(cmd, DalRemoteElevate))
 			}
 
-			if v.IsInstalled() && !force && !cli.IsRemoteInstance {
+			if v.IsInstalled() && !force {
 				proceed := false
 				if system.IsTty() {
 					prompt := &survey.Confirm{
@@ -164,7 +162,7 @@ var setupCmd = &cobra.Command{
 		}
 
 		// post setup - dal + node
-		if !cli.IsRemoteInstance && !disablePostProcess && apps.Node.IsInstalled() && apps.DalNode.IsInstalled() {
+		if !disablePostProcess && apps.Node.IsInstalled() && apps.DalNode.IsInstalled() {
 			// link dal to node
 			nodeModel, err := apps.Node.GetActiveModel()
 			util.AssertEE(err, "Failed to load node active mode!", constants.ExitActiveModelLoadFailed)

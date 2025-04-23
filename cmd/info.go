@@ -44,7 +44,7 @@ var infoCmd = &cobra.Command{
 
 			log.Debugf("Collecting info for %s", v.GetId())
 			optionsJson, _ := json.Marshal(options)
-			if cli.JsonLogFormat || cli.IsRemoteInstance {
+			if cli.JsonLogFormat {
 				result[v.GetId()], _ = v.GetInfo(optionsJson)
 			} else {
 				err := v.PrintInfo(optionsJson)
@@ -52,7 +52,7 @@ var infoCmd = &cobra.Command{
 			}
 		}
 
-		if cli.JsonLogFormat || cli.IsRemoteInstance {
+		if cli.JsonLogFormat {
 			output, err := json.Marshal(result)
 			util.AssertEE(err, "Failed to serialize Bake Buddy runtime info!", constants.ExitSerializationFailed)
 			fmt.Println(string(output))

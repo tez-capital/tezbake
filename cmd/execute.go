@@ -18,7 +18,7 @@ var executeCmd = &cobra.Command{
 	Short:  "executes command through tezbake",
 	Run: func(cmd *cobra.Command, args []string) {
 		requiresElevation, _ := cmd.Flags().GetBool("elevate")
-		if requiresElevation && !system.IsElevated() {
+		if requiresElevation {
 			system.RequireElevatedUser()
 		}
 
