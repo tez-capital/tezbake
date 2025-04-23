@@ -92,11 +92,6 @@ var setupCmd = &cobra.Command{
 
 		for _, v := range appsToProcess {
 			appId := v.GetId()
-			if !v.SupportsRemote() {
-				log.Debug(fmt.Sprintf("'%s' does not support remote. Skipping...", appId))
-				continue
-			}
-
 			branch := util.GetCommandStringFlagS(cmd, fmt.Sprintf("%s-branch", appId))
 			if branch == "" {
 				branch = util.GetCommandStringFlagS(cmd, Branch)
@@ -163,6 +158,8 @@ var setupCmd = &cobra.Command{
 
 		// post setup - dal + node
 		if !disablePostProcess && apps.Node.IsInstalled() && apps.DalNode.IsInstalled() {
+			log.Info("Post setup - dal + node")
+
 			// link dal to node
 			nodeModel, err := apps.Node.GetActiveModel()
 			util.AssertEE(err, "Failed to load node active mode!", constants.ExitActiveModelLoadFailed)

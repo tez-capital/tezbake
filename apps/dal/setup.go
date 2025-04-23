@@ -1,7 +1,9 @@
 package dal
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
@@ -110,6 +112,44 @@ func (app *DalNode) SetAttesterProfiles(keys []string) error {
 		log.Warn("Found remote node locator. Setup will run on remote.")
 	}
 
-	rawAttesterProfiles := strings.Join(keys, "\n")
+	attesterProfileKeys := make([]string, 0, len(keys))
+	for _, key := range keys {
+		// we just check all keys in the list
+		// we cant check against baker list to speed up because new bakers may not be registered yet :)
+
+		// v1/operations/update_consensus_key?publicKeyHash=tz3P9WvzULMuss5iDk4tjNQYWkwSrLAjUuh7&select=sender&sort.desc=level&limit=1
+		attesterKey := key
+		func() {
+			defer func() {
+				attesterProfileKeys = append(attesterProfileKeys, attesterKey)
+			}()
+
+			url := fmt.Sprintf("%sv1/operations/update_consensus_key?publicKeyHash=%s&select=sender&sort.desc=level&limit=1", constants.TzktConsensusKeyCheckingEndpoint, key)
+			var bakers []struct {
+				Address string `json:"address"`
+			}
+			log.Debugf("Checking if key %s is a consensus key through %s...", key, url)
+			response, err := http.Get(url)
+			if err != nil {
+				log.Warnf("Failed to check whether key %s is a consensus key: %v", key, err)
+				return
+			}
+			defer response.Body.Close()
+			if response.StatusCode != http.StatusOK {
+				log.Warnf("Failed to check whether key %s is a consensus key: %s", key, response.Status)
+				return
+			}
+			err = json.NewDecoder(response.Body).Decode(&bakers)
+			if err != nil {
+				log.Warnf("Failed to decode response for key %s: %v", key, err)
+				return
+			}
+			if len(bakers) > 0 {
+				attesterKey = bakers[0].Address
+			}
+		}()
+	}
+
+	rawAttesterProfiles := strings.Join(attesterProfileKeys, "\n")
 	return ami.WriteFile(app.GetPath(), []byte(rawAttesterProfiles), constants.AttesterProfilesFile)
 }

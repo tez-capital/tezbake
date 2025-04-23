@@ -1,7 +1,7 @@
 package constants
 
 const (
-	VERSION = "0.17.0-alpha.2"
+	VERSION = "0.17.0-alpha.3"
 
 	TezbakeRepository string = "tez-capital/tezbake"
 
@@ -10,4 +10,7 @@ const (
 	DefaultSshUser     string = "root"
 
 	DefaultAppJsonName string = "app.json"
+
+	// TODO: update after tzkt releases new version
+	TzktConsensusKeyCheckingEndpoint = "https://staging.api.tzkt.io/"
 )
