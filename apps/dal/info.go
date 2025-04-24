@@ -152,16 +152,6 @@ func (app *DalNode) PrintInfo(optionsJson []byte) error {
 	dalTable.AppendRow(table.Row{"Status Level", dalInfo.Level})
 
 	dalTable.AppendSeparator()
-	dalTable.AppendRow(table.Row{"Services", "Services"}, table.RowConfig{AutoMerge: true})
-	dalTable.AppendSeparator()
-	dalTable.AppendRow(table.Row{"Name", "Status (Started)"})
-	dalTable.AppendSeparator()
-
-	for k, v := range dalInfo.Services {
-		dalTable.AppendRow(table.Row{k, fmt.Sprintf("%v (%v)", v.Status, v.Started)})
-	}
-	dalTable.AppendSeparator()
-
 	dalTable.AppendRow(table.Row{"Attester Profiles", "Attester Profiles"}, table.RowConfig{AutoMerge: true})
 	dalTable.AppendSeparator()
 	if len(dalInfo.AttesterProfiles) == 0 {
@@ -169,6 +159,15 @@ func (app *DalNode) PrintInfo(optionsJson []byte) error {
 	}
 	for _, profile := range dalInfo.AttesterProfiles {
 		dalTable.AppendRow(table.Row{profile, profile}, table.RowConfig{AutoMerge: true})
+	}
+	dalTable.AppendSeparator()
+
+	dalTable.AppendSeparator()
+	dalTable.AppendRow(table.Row{"Services", "Services"}, table.RowConfig{AutoMerge: true})
+	dalTable.AppendSeparator()
+	dalTable.AppendRow(table.Row{"Name", "Status (Started)"})
+	for k, v := range dalInfo.Services {
+		dalTable.AppendRow(table.Row{k, fmt.Sprintf("%v (%v)", v.Status, v.Started)})
 	}
 	dalTable.AppendSeparator()
 

@@ -30,10 +30,8 @@ func (app *Node) GetSetupKind() string {
 }
 
 func (app *Node) Setup(ctx *base.SetupContext, args ...string) (int, error) {
-	if isRemote, _ := ami.IsRemoteApp(app.GetPath()); isRemote {
-		log.Warn("Found remote node locator. Setup will run on remote.")
-	}
-	if ctx.Remote != "" {
+	switch {
+	case ctx.Remote != "":
 		locator, err := ami.LoadRemoteLocator(app.GetPath())
 		config := ctx.ToRemoteConfiguration(app)
 		useExistingCredentials := false
@@ -81,6 +79,9 @@ func (app *Node) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 			// se we do not have to prompt for elevation when collecting info and other common tasks
 			ctx.User = locator.Username
 		}
+	case app.IsRemoteApp():
+		log.Warn("Found remote app locator. Setup will run on remote.")
+		ami.SetupRemoteTezbake(app.GetPath(), "latest")
 	}
 
 	appDef, err := base.GenerateConfiguration(app.GetAmiTemplate(ctx), ctx)

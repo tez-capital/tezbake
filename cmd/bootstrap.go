@@ -30,9 +30,9 @@ type snapshot struct {
 	ArtifactKind   ArtifactKind `json:"artifact_type"`
 }
 
-type snapshots struct {
-	Data []snapshot `json:"data"`
-}
+// type snapshots struct {
+// 	Data []snapshot `json:"data"`
+// }
 
 var bootstrapNodeCmd = &cobra.Command{
 	Use:       "bootstrap-node [--no-check] <url> <block hash>",

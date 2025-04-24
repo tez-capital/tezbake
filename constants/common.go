@@ -1,7 +1,7 @@
 package constants
 
 const (
-	VERSION = "0.17.0-alpha.4"
+	VERSION = "0.17.0-alpha.6"
 
 	TezbakeRepository string = "tez-capital/tezbake"
 

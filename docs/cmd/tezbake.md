@@ -37,6 +37,7 @@ Copyright © 2023 tez.capital
 * [tezbake signer](/tezbake/reference/cmd/tezbake_signer)	 - Passes args through to signer app.
 * [tezbake start](/tezbake/reference/cmd/tezbake_start)	 - Starts BB.
 * [tezbake stop](/tezbake/reference/cmd/tezbake_stop)	 - Stops BB.
+* [tezbake update-dal-profiles](/tezbake/reference/cmd/tezbake_update-dal-profiles)	 - Updates dal profiles.
 * [tezbake upgrade](/tezbake/reference/cmd/tezbake_upgrade)	 - Upgrades BB.
 * [tezbake version](/tezbake/reference/cmd/tezbake_version)	 - Prints BB CLI version.
 * [tezbake vote](/tezbake/reference/cmd/tezbake_vote)	 - (DEPRECATED) Cast vote for proposal/s.

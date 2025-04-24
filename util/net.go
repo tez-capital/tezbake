@@ -11,7 +11,6 @@ import (
 )
 
 func PrintDownloadPercent(done chan int64, path string, total int64) {
-
 	var stop bool = false
 
 	for {

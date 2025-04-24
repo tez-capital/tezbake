@@ -83,7 +83,10 @@ func RequireElevatedUser(injectArgs ...string) {
 		os.Exit(constants.ExitNotSupported)
 	}
 	// other options?
-	util.AssertBE(IsTty(), "No self elevation method available!", constants.ExitElevationRequired)
+	if !IsTty() {
+		log.Debug("No self elevation method available!")
+		os.Exit(constants.ExitElevationRequired)
+	}
 	_, err := exec.LookPath("sudo")
 	util.AssertEE(err, "Sudo not found! Please run process as root manually.", constants.ExitElevationRequired)
 

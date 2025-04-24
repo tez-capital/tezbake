@@ -1,13 +1,9 @@
 package dal
 
 import (
-	"encoding/json"
 	"fmt"
-	"net"
-	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps/base"
@@ -35,11 +31,8 @@ func (app *DalNode) GetSetupKind() string {
 }
 
 func (app *DalNode) Setup(ctx *base.SetupContext, args ...string) (int, error) {
-	if isRemote, _ := ami.IsRemoteApp(app.GetPath()); isRemote {
-		log.Warn("Found remote node locator. Setup will run on remote.")
-	}
-
-	if ctx.Remote != "" {
+	switch {
+	case ctx.Remote != "":
 		locator, err := ami.LoadRemoteLocator(app.GetPath())
 		config := ctx.ToRemoteConfiguration(app)
 		useExistingCredentials := false
@@ -87,6 +80,9 @@ func (app *DalNode) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 			// se we do not have to prompt for elevation when collecting info and other common tasks
 			ctx.User = locator.Username
 		}
+	case app.IsRemoteApp():
+		log.Warn("Found remote app locator. Setup will run on remote.")
+		ami.SetupRemoteTezbake(app.GetPath(), "latest")
 	}
 
 	appDef, err := base.GenerateConfiguration(app.GetAmiTemplate(ctx), ctx)
@@ -111,57 +107,9 @@ func (app *DalNode) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 
 func (app *DalNode) SetAttesterProfiles(keys []string) error {
 	if isRemote, _ := ami.IsRemoteApp(app.GetPath()); isRemote {
-		log.Warn("Found remote node locator. Setup will run on remote.")
+		log.Warn("Found remote app locator. Setup will run on remote.")
 	}
 
-	attesterProfileKeys := make([]string, 0, len(keys))
-	for _, key := range keys {
-		// we just check all keys in the list
-		// we cant check against baker list to speed up because new bakers may not be registered yet :)
-
-		// v1/operations/update_consensus_key?publicKeyHash=tz3P9WvzULMuss5iDk4tjNQYWkwSrLAjUuh7&select=sender&sort.desc=level&limit=1
-		attesterKey := key
-		func() {
-			defer func() {
-				attesterProfileKeys = append(attesterProfileKeys, attesterKey)
-			}()
-
-			url := fmt.Sprintf("%sv1/operations/update_consensus_key?publicKeyHash=%s&select=sender&sort.desc=level&limit=1", constants.TzktConsensusKeyCheckingEndpoint, key)
-			var bakers []struct {
-				Address string `json:"address"`
-			}
-			log.Infof("Checking if key %s is a consensus key...", key)
-			log.Debugf("Checking through %s...", url)
-			client := &http.Client{
-				Transport: &http.Transport{
-					DialContext: (&net.Dialer{
-						Timeout: 30 * time.Second, // enforce dial timeout
-					}).DialContext,
-					TLSHandshakeTimeout: 30 * time.Second,
-				},
-				Timeout: 2 * time.Minute,
-			}
-			response, err := client.Get(url)
-			if err != nil {
-				log.Warnf("Failed to check whether key %s is a consensus key: %v", key, err)
-				return
-			}
-			defer response.Body.Close()
-			if response.StatusCode != http.StatusOK {
-				log.Warnf("Failed to check whether key %s is a consensus key: %s", key, response.Status)
-				return
-			}
-			err = json.NewDecoder(response.Body).Decode(&bakers)
-			if err != nil {
-				log.Warnf("Failed to decode response for key %s: %v", key, err)
-				return
-			}
-			if len(bakers) > 0 {
-				attesterKey = bakers[0].Address
-			}
-		}()
-	}
-
-	rawAttesterProfiles := strings.Join(attesterProfileKeys, "\n")
+	rawAttesterProfiles := strings.Join(keys, "\n")
 	return ami.WriteFile(app.GetPath(), []byte(rawAttesterProfiles), constants.AttesterProfilesFile)
 }

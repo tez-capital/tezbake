@@ -32,6 +32,10 @@ const (
 	ElevationCredentialsEncFile string = "elevate.enc.json"
 )
 
+var TEZBAKE_POSSIBLE_RESIDUES = []string{
+	"/usr/sbin/tezbake",
+}
+
 var (
 	REMOTE_VARS = make(map[string]string)
 )
@@ -303,44 +307,61 @@ func getRemoteArchitecture(client *ssh.Client) (string, error) {
 	}
 	platform := strings.Trim(string(result.Stdout), " \n")
 
+	result = system.RunSshCommand(client, "uname -s", nil)
+	if result.Error != nil {
+		return "", errors.Join(errors.New("failed to get remote OS"), result.Error)
+	}
+	os := strings.Trim(string(result.Stdout), " \n")
+
 	switch platform {
 	case "x86_64":
-		return "amd64", nil
+		platform = "amd64"
 	case "aarch64":
-		return "arm64", nil
+		platform = "arm64"
 	default:
-		return "unknown", nil
+		return "", errors.New("unsupported architecture: " + platform)
+	}
+
+	switch os {
+	case "Linux":
+		return fmt.Sprintf("%s-%s", "linux", platform), nil
+	case "Darwin":
+		return fmt.Sprintf("%s-%s", "macos", platform), nil
+	default:
+		return "", errors.New("unsupported OS: " + os)
 	}
 }
-func executePreparationStage(config *RemoteConfiguration, mode string, key []byte) {
-	log.Info("Preparing remote...")
-	sshClient, sftp := system.OpenSshSession(config.ToSshConnectionDetails(), mode, key)
-	defer sshClient.Close()
-	defer sftp.Close()
+
+func setupTezbakeForRemote(sshClient *ssh.Client, sftp *sftp.Client, config *RemoteConfiguration, tagName string) {
+	bbCliForRemoteFile := "tezbake-for-remote"
 
 	credentials, err := config.GetElevationCredentials()
 	util.AssertE(err, "Failed to get elevation credentials!")
-	platform, err := getRemoteArchitecture(sshClient)
-	util.AssertE(err, "Failed to get remote architecture!")
-	bbCliForRemoteFile := "tezbake-for-remote"
-
-	// TODO: macos
-	binaryName := fmt.Sprintf("tezbake-%s-%s", "linux", platform)
-	release, err := util.FetchGithubRelease(context.Background(), true, "latest")
-	util.AssertE(err, "failed to fetch tezbake release")
-	url, _, err := release.FindAsset(binaryName)
-	util.AssertE(err, "failed to find tezbake asset in github release")
-
-	log.Trace(fmt.Sprintf("Downloading and installing tezbake (%s) for remote...", url))
-	// download tezbake for remote
 
 	remoteCliSource := os.Getenv("REMOTE_CLI_SOURCE")
-	if remoteCliSource != "" {
+	switch {
+	case remoteCliSource != "":
 		bbCliForRemoteFile = remoteCliSource
-	} else {
-		err := util.DownloadFile(url, bbCliForRemoteFile, false)
+		log.Debugf("Using tezbake from '%s'", bbCliForRemoteFile)
+	default:
+		// download tezbake for remote
+		architecture, err := getRemoteArchitecture(sshClient)
+		util.AssertE(err, "Failed to get remote architecture!")
+
+		binaryName := fmt.Sprintf("tezbake-%s", architecture)
+		release, err := util.FetchGithubRelease(context.Background(), true, tagName)
+		util.AssertE(err, "failed to fetch tezbake release")
+		url, _, err := release.FindAsset(binaryName)
+		util.AssertE(err, "failed to find tezbake asset in github release")
+		if result := runSshCommand(sshClient, "tezbake --version", config, system.RunSshCommand); strings.Contains(string(result.Stdout), release.TagName) {
+			return
+		}
+
+		log.Trace(fmt.Sprintf("Downloading and installing tezbake (%s) for remote...", url))
+		err = util.DownloadFile(url, bbCliForRemoteFile, false)
 		util.AssertE(err, "Failed to download tezbake for the remote!")
 	}
+
 	// open tmp file in remote
 	tmpBbCliPath := path.Join("/tmp", path.Base(bbCliForRemoteFile))
 	bbCliFile, err := sftp.Create(tmpBbCliPath)
@@ -353,7 +374,7 @@ func executePreparationStage(config *RemoteConfiguration, mode string, key []byt
 	// move file to sbin
 	result := system.RunSshCommand(sshClient, "chmod +x "+tmpBbCliPath, nil)
 	util.AssertE(result.Error, "Failed to activate tezbake!")
-	bbcCliDst := "/usr/sbin/tezbake"
+	bbcCliDst := "/usr/bin/tezbake"
 	base64Cmd := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("cp %s %s", tmpBbCliPath, bbcCliDst)))
 	result = system.RunPipedSshCommand(sshClient, fmt.Sprintf("%s execute --base64 %s --elevate", tmpBbCliPath, base64Cmd), credentials.ToEnvMap())
 	util.AssertE(result.Error, "Failed to copy tezbake to sbin!")
@@ -362,15 +383,40 @@ func executePreparationStage(config *RemoteConfiguration, mode string, key []byt
 	result = system.RunSshCommand(sshClient, fmt.Sprintf("rm %s", tmpBbCliPath), nil)
 	util.AssertE(result.Error, "Failed to remove tezbake residue!")
 
+	cleanupCmd := "rm -f " + strings.Join(TEZBAKE_POSSIBLE_RESIDUES, " ")
+	base64Cmd = base64.StdEncoding.EncodeToString([]byte(cleanupCmd))
+	result = system.RunPipedSshCommand(sshClient, fmt.Sprintf("%s execute --base64 %s --elevate", bbcCliDst, base64Cmd), credentials.ToEnvMap())
+	util.AssertE(result.Error, "Failed to remove tezbake residues!")
+	util.AssertBE(result.ExitCode == 0, "Failed to remove tezbake residues!", constants.ExitIOError)
+}
+
+func SetupRemoteTezbake(appDir string, tagname string) {
+	config, err := LoadRemoteLocator(appDir) // try to connect with BB keys
+	util.AssertE(err, "Failed to load remote locator!")
+	session, err := config.OpenAppRemoteSession()
+	util.AssertE(err, "Failed to open remote session!")
+	defer session.Close()
+
+	setupTezbakeForRemote(session.sshClient, session.sftpSession, config, tagname)
+}
+
+func executePreparationStage(config *RemoteConfiguration, mode string, key []byte) {
+	log.Info("Preparing remote...")
+	sshClient, sftp := system.OpenSshSession(config.ToSshConnectionDetails(), mode, key)
+	defer sshClient.Close()
+	defer sftp.Close()
+
+	setupTezbakeForRemote(sshClient, sftp, config, "latest")
+
 	log.Trace("Injecting ssh keys...")
 	// prepare .ssh
-	err = sftp.MkdirAll("~/.ssh")
+	err := sftp.MkdirAll("~/.ssh")
 	util.AssertE(err, "Failed to prepare directory for authorized keys!")
 	// read prepared pub key
 	pubKey, err := os.ReadFile(config.PublicKey)
 	util.AssertE(err, "Failed to locate public key!")
 	// write if necessary
-	result = system.RunSshCommand(sshClient, fmt.Sprintf("grep \"%s\" ~/.ssh/authorized_keys || echo \"%s\" >> ~/.ssh/authorized_keys", pubKey, pubKey), nil)
+	result := system.RunSshCommand(sshClient, fmt.Sprintf("grep \"%s\" ~/.ssh/authorized_keys || echo \"%s\" >> ~/.ssh/authorized_keys", pubKey, pubKey), nil)
 	util.AssertE(result.Error, "Failed to inject BB public key!")
 	log.Info("Remote prepared!")
 }
@@ -459,25 +505,6 @@ func filterNonPassableArgs(args []string) []string {
 	}
 
 	return filteredArgs
-}
-
-func keepJustRootCmdArgs(args []string) []string {
-	if len(args) < 1 {
-		return args
-	}
-
-	var i int
-	for i = 1; i < len(args); i++ { // we skip first which is command
-		if strings.HasPrefix(args[i], "-") {
-			if !strings.Contains(args[i], "=") && i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
-				i++
-			}
-			continue
-		}
-		break
-	}
-
-	return args[:i]
 }
 
 func (session *TezbakeRemoteSession) prepareArgsForProxy(passthrough bool) []string {
