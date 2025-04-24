@@ -3,9 +3,11 @@ package dal
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps/base"
@@ -128,8 +130,18 @@ func (app *DalNode) SetAttesterProfiles(keys []string) error {
 			var bakers []struct {
 				Address string `json:"address"`
 			}
-			log.Debugf("Checking if key %s is a consensus key through %s...", key, url)
-			response, err := http.Get(url)
+			log.Infof("Checking if key %s is a consensus key...", key)
+			log.Debugf("Checking through %s...", url)
+			client := &http.Client{
+				Transport: &http.Transport{
+					DialContext: (&net.Dialer{
+						Timeout: 30 * time.Second, // enforce dial timeout
+					}).DialContext,
+					TLSHandshakeTimeout: 30 * time.Second,
+				},
+				Timeout: 2 * time.Minute,
+			}
+			response, err := client.Get(url)
 			if err != nil {
 				log.Warnf("Failed to check whether key %s is a consensus key: %v", key, err)
 				return
