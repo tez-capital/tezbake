@@ -676,15 +676,6 @@ func (session *TezbakeRemoteSession) ForwardAmiExecuteWithOutputChannel(workingD
 	return result.ExitCode, result.Error
 }
 
-// TODO: remove
-func (session *TezbakeRemoteSession) ProxyToRemoteAppGetOutput() (string, int, error) {
-	args := session.prepareArgsForProxy(false)
-
-	result := runSshCommand(session.sshClient, strings.Join(args, " "), session.locator, system.RunSshCommand)
-
-	return string(result.Stdout), result.ExitCode, result.Error
-}
-
 func (session *TezbakeRemoteSession) writeFileToRemote(fullPath string, content []byte, mode os.FileMode) error {
 	file, err := session.sftpSession.OpenFile(fullPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
 	if err != nil {

@@ -123,7 +123,7 @@ var setupCmd = &cobra.Command{
 				proceed := false
 				if system.IsTty() {
 					prompt := &survey.Confirm{
-						Message: fmt.Sprintf("Existing setup of '%s' found. Do you want to %s?", v.GetId(), v.GetSetupKind()),
+						Message: fmt.Sprintf("Existing setup of '%s' found. Do you want to merge?", v.GetId()),
 					}
 					survey.AskOne(prompt, &proceed)
 				}

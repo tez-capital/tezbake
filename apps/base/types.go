@@ -28,8 +28,6 @@ type BakeBuddyApp interface {
 	GetVersions(options *ami.CollectVersionsOptions) (*ami.InstanceVersions, error)
 	GetAppVersion() (string, error)
 	IsInstalled() bool
-	SupportsRemote() bool
-	GetSetupKind() string
 }
 
 type AmiInfoCollectionOption struct {

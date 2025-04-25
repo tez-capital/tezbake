@@ -26,10 +26,6 @@ func promptReuseElevateCredentials() bool {
 	return response
 }
 
-func (app *DalNode) GetSetupKind() string {
-	return base.MergingSetupKind
-}
-
 func (app *DalNode) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 	switch {
 	case ctx.Remote != "":

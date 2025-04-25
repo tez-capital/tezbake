@@ -182,7 +182,6 @@ func ExecuteGetOutput(workingDir string, args ...string) (output string, exitCod
 			output += line + "\n"
 		}
 	}()
-
 	exitCode, err = runAmiCmdWithOutputChannel(workingDir, outputChannel, args...)
 	close(outputChannel) // Close the channel to signal the goroutine to finish
 	// Wait for the goroutine to finish

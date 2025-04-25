@@ -11,10 +11,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (app *Peak) GetSetupKind() string {
-	return base.MergingSetupKind
-}
-
 func (app *Peak) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 	appDef, err := base.GenerateConfiguration(app.GetAmiTemplate(ctx), ctx)
 	if err != nil {
