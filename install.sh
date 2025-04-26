@@ -79,6 +79,7 @@ if "$@" "https://github.com/tez-capital/tezbake/releases/download/$LATEST/tezbak
 	else
 		echo "tezbake $LATEST for $PLATFORM successfully installed"
 	fi
+	hash -r 2>/dev/null || true
 else
 	echo "tezbake installation failed!" 1>&2
 	exit 1
