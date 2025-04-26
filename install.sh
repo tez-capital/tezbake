@@ -29,7 +29,7 @@ else
 	fi
 fi
 
-if tezbake version | grep "$LATEST"; then
+if tezbake version 2>/dev/null | grep "$LATEST" >/dev/null 2>&1; then
 	echo "latest tezbake already available"
 	exit 0
 fi
