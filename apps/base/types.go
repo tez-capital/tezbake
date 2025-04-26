@@ -25,8 +25,8 @@ type BakeBuddyApp interface {
 	GetInfo(optionsJson []byte) (any, error)
 	GetServiceInfo() (map[string]AmiServiceInfo, error)
 	PrintInfo(optionsJson []byte) error
-	GetVersions(options *ami.CollectVersionsOptions) (*ami.InstanceVersions, error)
-	GetAppVersion() (string, error)
+	GetVersions(options ami.CollectVersionsOptions) (*ami.InstanceVersions, error)
+	GetVersion() (string, error)
 	IsInstalled() bool
 }
 

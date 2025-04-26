@@ -1,30 +1,13 @@
 package dal
 
 import (
-	"encoding/json"
-
 	"github.com/tez-capital/tezbake/ami"
-	"github.com/tez-capital/tezbake/apps/base"
 )
 
-func (app *DalNode) GetVersions(options *ami.CollectVersionsOptions) (*ami.InstanceVersions, error) {
-	var postprocess ami.RemoteVersionPostprocessFn = func(output string) (*ami.InstanceVersions, error) {
-		bbCliVersions := &base.BBInstanceVersions{}
-		err := json.Unmarshal([]byte(output), bbCliVersions)
-		if err != nil {
-			return nil, err
-		}
-		result := &ami.InstanceVersions{
-			Cli:      bbCliVersions.Cli,
-			Packages: bbCliVersions.Dal.Packages,
-			Binaries: bbCliVersions.Dal.Binaries,
-			IsRemote: true,
-		}
-		return result, nil
-	}
-	return ami.GetVersions(app.GetPath(), options, &postprocess)
+func (app *DalNode) GetVersions(options ami.CollectVersionsOptions) (*ami.InstanceVersions, error) {
+	return ami.GetVersions(app.GetPath(), options)
 }
 
-func (app *DalNode) GetAppVersion() (string, error) {
+func (app *DalNode) GetVersion() (string, error) {
 	return ami.GetAppVersion(app.GetPath())
 }

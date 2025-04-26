@@ -190,48 +190,8 @@ func ExecuteGetOutput(workingDir string, args ...string) (output string, exitCod
 }
 
 func ExecuteInfo(workingDir string, args ...string) ([]byte, int, error) {
-	// amiArgs := []string{
-	// 	"--path=" + workingDir,
-	// 	"--output-format=json",
-	// 	"--log-level=" + options.LogLevel,
-	// 	"info",
-	// }
-
 	output, exitCode, err := ExecuteGetOutput(workingDir, "--output-format=json",
 		"--log-level="+options.LogLevel,
 		"info")
 	return []byte(output), exitCode, err
-
-	// if isRemote, locator := IsRemoteApp(workingDir); isRemote {
-	// 	session, err := locator.OpenAppRemoteSession()
-	// 	if err != nil {
-	// 		return []byte{}, -1, err
-	// 	}
-
-	// 	defer session.Close()
-	// 	return session.ForwardAmiExecuteGetOutput()
-	// 	return session.ProxyToRemoteAppExecuteInfo(append(amiArgs, args...))
-	// }
-
-	// eliPath, err := exec.LookPath("eli")
-	// if err != nil {
-	// 	return []byte{}, -1, errors.New("eli not found")
-	// }
-	// amiPath, err := exec.LookPath("ami")
-	// if err != nil {
-	// 	return []byte{}, -1, errors.New("ami not found")
-	// }
-
-	// eliArgs := make([]string, 0)
-	// eliArgs = append(eliArgs, amiPath)
-	// eliArgs = append(eliArgs, amiArgs...)
-	// eliArgs = append(eliArgs, args...)
-	// output, err := exec.Command(eliPath, eliArgs...).CombinedOutput()
-	// if err != nil {
-	// 	if exitError, ok := err.(*exec.ExitError); ok {
-	// 		return output, exitError.ExitCode(), err
-	// 	}
-	// 	return output, -1, err
-	// }
-	// return output, 0, nil
 }

@@ -17,7 +17,7 @@ var (
 	amiInstallScriptSource = "https://raw.githubusercontent.com/alis-is/ami/master/install.sh"
 )
 
-func Install() (int, error) {
+func Install(silent bool) (int, error) {
 	log.Trace("Downloading eli&ami install script...")
 
 	tmpInstallScript := path.Join(os.TempDir(), fmt.Sprintf("%s-%s", uuid.NewString(), "install.sh"))
@@ -33,8 +33,14 @@ func Install() (int, error) {
 	}
 	log.Trace("Executing eli&ami install script...")
 	installProc := exec.Command(shPath, tmpInstallScript)
-	installProc.Stdout = os.Stdout
-	installProc.Stderr = os.Stderr
+	switch {
+	case silent:
+		installProc.Stdout = nil
+		installProc.Stderr = nil
+	default:
+		installProc.Stdout = os.Stdout
+		installProc.Stderr = os.Stderr
+	}
 	err = installProc.Run()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {

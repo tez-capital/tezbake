@@ -18,15 +18,12 @@ type AppVersions struct {
 	Version      string                  `json:"version"`
 }
 type InstanceVersions struct {
-	Cli      string
-	Binaries map[string]string
-	Packages map[string]string
-	IsRemote bool
+	RemoteTezbake string
+	Binaries      map[string]string
+	Packages      map[string]string
 }
 
 type CollectVersionsOptions struct {
-	Packages bool
-	Binaries bool
 }
 
 type PackageVersionInfo struct {
@@ -35,9 +32,7 @@ type PackageVersionInfo struct {
 	Id           string
 }
 
-type RemoteVersionPostprocessFn func(string) (*InstanceVersions, error)
-
-func GetVersions(workingDir string, options *CollectVersionsOptions, remotePostProcess *RemoteVersionPostprocessFn) (*InstanceVersions, error) {
+func GetVersions(workingDir string, options CollectVersionsOptions) (*InstanceVersions, error) {
 	appVersionsRaw, exitCode, err := ExecuteGetOutput(workingDir, "--output-format=json", "version", "--all")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get app versions (%s)", err.Error())
@@ -51,9 +46,20 @@ func GetVersions(workingDir string, options *CollectVersionsOptions, remotePostP
 		return nil, fmt.Errorf("failed to parse app versions (%s)", err.Error())
 	}
 
-	isRemote, _ := IsRemoteApp(workingDir)
+	remoteTezbakeVersion := ""
+
+	isRemote, locator := IsRemoteApp(workingDir)
 	if isRemote {
-		//TODO: tezbake version
+		session, err := locator.OpenAppRemoteSession()
+		if err != nil {
+			return nil, err
+		}
+
+		defer session.Close()
+		remoteTezbakeVersion, err = session.GetRemoteTezbakeVersion()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get remote tezbake version (%s)", err.Error())
+		}
 	}
 
 	packages := make(map[string]string)
@@ -69,10 +75,9 @@ func GetVersions(workingDir string, options *CollectVersionsOptions, remotePostP
 	binaries := appVersions.Binaries
 
 	return &InstanceVersions{
-		Binaries: binaries,
-		Packages: packages,
-
-		IsRemote: isRemote,
+		Binaries:      binaries,
+		Packages:      packages,
+		RemoteTezbake: remoteTezbakeVersion,
 	}, nil
 
 }

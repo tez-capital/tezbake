@@ -23,9 +23,10 @@ var upgradeCmd = &cobra.Command{
 			UpgradeStorage: util.GetCommandBoolFlagS(cmd, UpgradeStorage),
 		}
 
-		if util.GetCommandBoolFlagS(cmd, SetupAmi) {
+		if !util.GetCommandBoolFlagS(cmd, SkipAmiSetup) {
 			// install ami by default in case of remote instance
-			exitCode, err := ami.Install()
+			log.Info("Upgrading ami and eli...")
+			exitCode, err := ami.Install(true)
 			util.AssertEE(err, "Failed to install ami and eli!", exitCode)
 		}
 
@@ -49,6 +50,6 @@ func init() {
 	}
 
 	upgradeCmd.Flags().BoolP(UpgradeStorage, "s", false, "Upgrade storage during the upgrade.")
-	upgradeCmd.Flags().BoolP(SetupAmi, "a", false, "Install latest ami during the BB upgrade.")
+	upgradeCmd.Flags().Bool(SkipAmiSetup, false, "Skip ami upgrade")
 	RootCmd.AddCommand(upgradeCmd)
 }

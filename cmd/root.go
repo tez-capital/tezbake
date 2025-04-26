@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/cli"
@@ -57,11 +58,10 @@ var (
 	RootCmd = &cobra.Command{
 		Use:   "tezbake",
 		Short: "tezbake CLI",
-		Long: `tezbake CLI
-Copyright © 2023 tez.capital
-`,
+		Long: fmt.Sprintf(`tezbake CLI
+Copyright © %d tez.capital
+`, time.Now().Year()),
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-
 			if cmd.Flags().Changed("path") {
 				cli.BBdir, _ = cmd.Flags().GetString("path")
 			} else {
@@ -102,9 +102,6 @@ Copyright © 2023 tez.capital
 			}
 
 			format, _ := cmd.Flags().GetString("output-format")
-			// if cli.IsRemoteInstance { // override for remote instance
-			// 	format = "json"
-			// }
 
 			switch format {
 			case "json":
@@ -142,8 +139,16 @@ func init() {
 	RootCmd.PersistentFlags().StringP("path", "p", constants.DefaultBBDirectory, "Path to bake buddy instance")
 	RootCmd.PersistentFlags().StringP("output-format", "o", "auto", "Sets output log format (json/text/auto)")
 	RootCmd.PersistentFlags().StringP("log-level", "l", "info", "Sets output log format (json/text/auto)")
-	RootCmd.PersistentFlags().Bool("remote-instance", false, "Tells tezbake to operate in remote-instance mode")
-	RootCmd.PersistentFlags().MarkHidden("remote-instance")
+	RootCmd.PersistentFlags().Bool("version", false, "Prints tezbake version")
+	defaultHelpFunc := RootCmd.HelpFunc()
+	RootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		v, _ := cmd.Flags().GetBool("version")
+		if v {
+			fmt.Println(constants.VERSION)
+			os.Exit(0)
+		}
+		defaultHelpFunc(cmd, args)
+	})
 	RootCmd.PersistentFlags().String("remote-instance-vars", "", "Tells tezbake to which remote vars to set (available only with remote-instance)")
 	RootCmd.PersistentFlags().MarkHidden("remote-instance-vars")
 	RootCmd.PersistentFlags().SetInterspersed(false)

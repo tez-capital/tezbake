@@ -40,7 +40,7 @@ const (
 	Signer              = "signer"
 	SignerVersion       = "signer-version"
 	SignerConfiguration = "signer-configuration"
-	SetupAmi            = "setup-ami"
+	SkipAmiSetup        = "skip-ami-setup"
 	Force               = "force"
 	WithDal             = "with-dal"
 	DisablePostProcess  = "disable-post-process"
@@ -75,9 +75,10 @@ var setupCmd = &cobra.Command{
 		util.AssertBE(id != "bb-default" || cli.BBdir == constants.DefaultBBDirectory, "Please specify id for baker. 'default' id is allowed only for bake buddy installed in '"+constants.DefaultBBDirectory+"' path!", constants.ExitInvalidId)
 		cli.BBInstanceId = id
 
-		if util.GetCommandBoolFlagS(cmd, SetupAmi) {
+		if !util.GetCommandBoolFlagS(cmd, SkipAmiSetup) {
 			// install ami by default in case of remote instance
-			exitCode, err := ami.Install()
+			log.Info("Installing ami and eli...")
+			exitCode, err := ami.Install(true)
 			util.AssertEE(err, "Failed to install ami and eli!", exitCode)
 		}
 
@@ -224,7 +225,7 @@ var setupCmd = &cobra.Command{
 }
 
 func init() {
-	setupCmd.Flags().BoolP(SetupAmi, "a", false, "Install latest ami during the BB setup.")
+	setupCmd.Flags().Bool(SkipAmiSetup, false, "Skip ami setup.")
 	setupCmd.Flags().Bool(Force, false, "Force setup - potentially overwriting existing installation.")
 
 	user, err := user.Current()

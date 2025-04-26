@@ -338,7 +338,7 @@ func setupTezbakeForRemote(sshClient *ssh.Client, sftp *sftp.Client, config *Rem
 	credentials, err := config.GetElevationCredentials()
 	util.AssertE(err, "Failed to get elevation credentials!")
 
-	remoteCliSource := os.Getenv("REMOTE_CLI_SOURCE")
+	remoteCliSource := os.Getenv("REMOTE_TEZBAKE_SOURCE")
 	switch {
 	case remoteCliSource != "":
 		bbCliForRemoteFile = remoteCliSource
@@ -383,11 +383,19 @@ func setupTezbakeForRemote(sshClient *ssh.Client, sftp *sftp.Client, config *Rem
 	result = system.RunSshCommand(sshClient, fmt.Sprintf("rm %s", tmpBbCliPath), nil)
 	util.AssertE(result.Error, "Failed to remove tezbake residue!")
 
+	// cleanup residues
 	cleanupCmd := "rm -f " + strings.Join(TEZBAKE_POSSIBLE_RESIDUES, " ")
 	base64Cmd = base64.StdEncoding.EncodeToString([]byte(cleanupCmd))
 	result = system.RunPipedSshCommand(sshClient, fmt.Sprintf("%s execute --base64 %s --elevate", bbcCliDst, base64Cmd), credentials.ToEnvMap())
 	util.AssertE(result.Error, "Failed to remove tezbake residues!")
 	util.AssertBE(result.ExitCode == 0, "Failed to remove tezbake residues!", constants.ExitIOError)
+
+	// setup ami
+	setupAmiCmd := "tezbake setup-ami --silent"
+	base64Cmd = base64.StdEncoding.EncodeToString([]byte(setupAmiCmd))
+	result = system.RunPipedSshCommand(sshClient, fmt.Sprintf("%s execute --base64 %s --elevate", bbcCliDst, base64Cmd), credentials.ToEnvMap())
+	util.AssertE(result.Error, "Failed to setup ami!")
+	util.AssertBE(result.ExitCode == 0, "Failed to setup ami!", constants.ExitIOError)
 }
 
 func SetupRemoteTezbake(appDir string, tagname string) {
@@ -566,6 +574,21 @@ func (session *TezbakeRemoteSession) ForwardAmiExecuteGetOutput(workingDir strin
 
 	result := runSshCommand(session.sshClient, strings.Join(forwardArgs, " "), session.locator, system.RunSshCommand)
 	return string(result.Stdout), result.ExitCode, result.Error
+}
+
+func (session *TezbakeRemoteSession) GetRemoteTezbakeVersion() (string, error) {
+	result := runSshCommand(session.sshClient, "tezbake --version", session.locator, system.RunSshCommand)
+	if result.Error != nil {
+		return "", errors.Join(errors.New("failed to get remote tezbake version"), result.Error)
+	}
+	if result.ExitCode != 0 {
+		return "", errors.New("failed to get remote tezbake version - exit code " + fmt.Sprint(result.ExitCode))
+	}
+	version := strings.Trim(string(result.Stdout), " \n")
+	if version == "" {
+		return "", errors.New("failed to get remote tezbake version - empty output")
+	}
+	return version, nil
 }
 
 func (session *TezbakeRemoteSession) ForwardAmiExecuteWithOutputChannel(workingDir string, outputChannel chan<- string, args ...string) (int, error) {
