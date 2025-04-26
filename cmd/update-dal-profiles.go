@@ -29,7 +29,9 @@ var updateDalProfilesCmd = &cobra.Command{
 		autodetect := util.GetCommandBoolFlag(cmd, "auto")
 		force := util.GetCommandBoolFlag(cmd, "force")
 
-		if len(args) == 0 {
+		args = util.RemoveCmdFlags(cmd, args)
+
+		if len(args) == 0 && !autodetect {
 			proceed := false
 			survey.AskOne(&survey.Confirm{
 				Message: "No keys provided. Do you want to autodetect?",

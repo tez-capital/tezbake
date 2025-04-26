@@ -2,8 +2,11 @@ package util
 
 import (
 	"os"
+	"slices"
 
+	"github.com/samber/lo"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 func GetCommandStringFlag(cmd *cobra.Command, flag string) string {
@@ -55,4 +58,14 @@ func GetCommandArgs(cmd *cobra.Command) []string {
 	}
 
 	return nil
+}
+
+func RemoveCmdFlags(cmd *cobra.Command, args []string) []string {
+	flags := []string{}
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		flags = append(flags, "--"+f.Name)
+	})
+	return lo.Filter(args, func(arg string, _ int) bool {
+		return !slices.Contains(flags, arg)
+	})
 }
