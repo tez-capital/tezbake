@@ -41,11 +41,11 @@ tezbake setup [flags]
       --peak-configuration string     Sets peak configuration. (default "{}")
       --peak-version string           Sets peak configuration. (default "latest")
       --remote-reset                  Resets and reconfigures remote node locator. (experimental)
-  -a, --setup-ami                     Install latest ami during the BB setup.
       --signer                        Setups signer.
       --signer-branch string          Sets signer configuration.
       --signer-configuration string   Sets signer configuration. (default "{}")
       --signer-version string         Sets signer configuration. (default "latest")
+      --skip-ami-setup                Skip ami setup.
   -u, --user string                   User you want to operate BB under. (default "runner")
       --with-dal                      Setup dal node. (experimental)
 ```
@@ -56,6 +56,7 @@ tezbake setup [flags]
   -l, --log-level string       Sets output log format (json/text/auto) (default "info")
   -o, --output-format string   Sets output log format (json/text/auto) (default "auto")
   -p, --path string            Path to bake buddy instance (default "/bake-buddy")
+      --version                Prints tezbake version
 ```
 
 ### SEE ALSO

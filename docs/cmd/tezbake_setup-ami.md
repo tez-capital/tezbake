@@ -13,8 +13,8 @@ tezbake setup-ami [flags]
 ### Options
 
 ```
-  -h, --help                 help for setup-ami
-      --remote-node string   (Not available).
+  -h, --help     help for setup-ami
+      --silent   Do not print any output.
 ```
 
 ### Options inherited from parent commands
@@ -23,6 +23,7 @@ tezbake setup-ami [flags]
   -l, --log-level string       Sets output log format (json/text/auto) (default "info")
   -o, --output-format string   Sets output log format (json/text/auto) (default "auto")
   -p, --path string            Path to bake buddy instance (default "/bake-buddy")
+      --version                Prints tezbake version
 ```
 
 ### SEE ALSO

@@ -13,15 +13,13 @@ tezbake version [flags]
 ### Options
 
 ```
-  -a, --all        Prints version of all BB instance packages/binaries.
-  -b, --binaries   Prints versions of binaries.
-      --dal        Prints versions of dal.
-  -h, --help       help for version
-      --node       Prints versions of node.
-      --packages   Prints versions packages.
-      --pay        Prints versions of pay.
-      --peak       Prints versions of peak.
-      --signer     Prints versions of signer.
+  -a, --all      Prints version of all BB instance packages/binaries.
+      --dal      Prints versions of dal.
+  -h, --help     help for version
+      --node     Prints versions of node.
+      --pay      Prints versions of pay.
+      --peak     Prints versions of peak.
+      --signer   Prints versions of signer.
 ```
 
 ### Options inherited from parent commands
@@ -30,6 +28,7 @@ tezbake version [flags]
   -l, --log-level string       Sets output log format (json/text/auto) (default "info")
   -o, --output-format string   Sets output log format (json/text/auto) (default "auto")
   -p, --path string            Path to bake buddy instance (default "/bake-buddy")
+      --version                Prints tezbake version
 ```
 
 ### SEE ALSO

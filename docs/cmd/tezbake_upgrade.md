@@ -18,8 +18,8 @@ tezbake upgrade [flags]
       --node              Upgrade node.
       --pay               Upgrade pay.
       --peak              Upgrade peak.
-  -a, --setup-ami         Install latest ami during the BB upgrade.
       --signer            Upgrade signer.
+      --skip-ami-setup    Skip ami upgrade
   -s, --upgrade-storage   Upgrade storage during the upgrade.
 ```
 
@@ -29,6 +29,7 @@ tezbake upgrade [flags]
   -l, --log-level string       Sets output log format (json/text/auto) (default "info")
   -o, --output-format string   Sets output log format (json/text/auto) (default "auto")
   -p, --path string            Path to bake buddy instance (default "/bake-buddy")
+      --version                Prints tezbake version
 ```
 
 ### SEE ALSO
