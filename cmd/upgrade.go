@@ -33,10 +33,12 @@ var upgradeCmd = &cobra.Command{
 		exitCode, err := ami.EraseCache()
 		util.AssertEE(err, "Failed to erase ami cache!", exitCode)
 
-		for _, v := range GetAppsBySelectionCriteria(cmd, AppSelectionCriteria{
+		appsToUpgrade := GetAppsBySelectionCriteria(cmd, AppSelectionCriteria{
 			InitialSelection:  InstalledApps,
 			FallbackSelection: ImplicitApps,
-		}) {
+		})
+
+		for _, v := range appsToUpgrade {
 			exitCode, err := v.Upgrade(upgradeContext)
 			util.AssertEE(err, fmt.Sprintf("Failed to upgrade '%s'!", v.GetId()), exitCode)
 		}

@@ -11,6 +11,7 @@ import (
 
 	"github.com/tez-capital/tezbake/constants"
 	"github.com/tez-capital/tezbake/system"
+	"github.com/tez-capital/tezbake/util"
 
 	"golang.org/x/crypto/ssh"
 
@@ -159,9 +160,8 @@ func WriteFile(workingDir string, content []byte, relativePath string) error {
 		defer session.Close()
 
 		credentials, err := locator.GetElevationCredentials()
-		if err != nil {
-			return err
-		}
+		util.AssertEE(err, "Failed to get elevation credentials!", constants.ExitInvalidRemoteCredentials)
+
 		err = prepareFolderStructure(session.sshClient, locator.InstancePath, locator.App, locator.Username, credentials.ToEnvMap())
 		if err != nil {
 			return err
@@ -187,9 +187,8 @@ func WriteAppDefinition(workingDir string, configuration map[string]interface{},
 		defer session.Close()
 
 		credentials, err := locator.GetElevationCredentials()
-		if err != nil {
-			return err
-		}
+		util.AssertEE(err, "Failed to get elevation credentials!", constants.ExitInvalidRemoteCredentials)
+
 		err = prepareFolderStructure(session.sshClient, locator.InstancePath, locator.App, locator.Username, credentials.ToEnvMap())
 		if err != nil {
 			return err

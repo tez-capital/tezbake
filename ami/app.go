@@ -1,6 +1,7 @@
 package ami
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -9,6 +10,16 @@ import (
 
 func SetupApp(appDir string, args ...string) (int, error) {
 	log.Trace("Installing '" + appDir + "...")
+	exitCode, err := Execute(appDir, "--erase-cache")
+	if err != nil {
+		log.Error("Failed to erase cache: ", err)
+		return exitCode, err
+	}
+	if exitCode != 0 {
+		log.Error("Failed to erase cache: ", exitCode)
+		return exitCode, fmt.Errorf("failed to erase cache")
+	}
+
 	execArgs := make([]string, 0)
 	execArgs = append(execArgs, "setup")
 	execArgs = append(execArgs, args...)

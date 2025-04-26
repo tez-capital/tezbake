@@ -111,6 +111,7 @@ func (config *RemoteConfiguration) GetElevationCredentials() (*RemoteElevateCred
 	encPath := filepath.Join(config.ElevationCredentialsDirectory, ElevationCredentialsEncFile)
 	plainPath := filepath.Join(config.ElevationCredentialsDirectory, ElevationCredentialsFile)
 
+	// TODO: cache
 	if _, err := os.Stat(encPath); !os.IsNotExist(err) {
 		var password string
 		prompt := &survey.Password{
@@ -332,10 +333,10 @@ func getRemoteArchitecture(client *ssh.Client) (string, error) {
 	}
 }
 
-func setupTezbakeForRemote(sshClient *ssh.Client, sftp *sftp.Client, config *RemoteConfiguration, tagName string) {
+func setupTezbakeForRemote(sshClient *ssh.Client, sftp *sftp.Client, locator *RemoteConfiguration, tagName string) {
 	bbCliForRemoteFile := "tezbake-for-remote"
 
-	credentials, err := config.GetElevationCredentials()
+	credentials, err := locator.GetElevationCredentials()
 	util.AssertE(err, "Failed to get elevation credentials!")
 
 	remoteCliSource := os.Getenv("REMOTE_TEZBAKE_SOURCE")
@@ -353,7 +354,7 @@ func setupTezbakeForRemote(sshClient *ssh.Client, sftp *sftp.Client, config *Rem
 		util.AssertE(err, "failed to fetch tezbake release")
 		url, _, err := release.FindAsset(binaryName)
 		util.AssertE(err, "failed to find tezbake asset in github release")
-		if result := runSshCommand(sshClient, "tezbake --version", config, system.RunSshCommand); strings.Contains(string(result.Stdout), release.TagName) {
+		if result := runSshCommand(sshClient, "tezbake --version", locator, system.RunSshCommand); strings.Contains(string(result.Stdout), release.TagName) {
 			return
 		}
 
@@ -495,9 +496,7 @@ func runSshCommand(client *ssh.Client, cmd string, locator *RemoteConfiguration,
 			return result
 		}
 		elevationCredentials, err := locator.GetElevationCredentials()
-		if err != nil {
-			return result
-		}
+		util.AssertEE(err, "Failed to get elevation credentials!", constants.ExitInvalidRemoteCredentials)
 		if elevationCredentials.Kind == REMOTE_ELEVATION_NONE {
 			return result
 		}
@@ -612,9 +611,7 @@ func (session *TezbakeRemoteSession) ForwardAmiExecuteWithOutputChannel(workingD
 			return result.ExitCode, result.Error
 		}
 		elevationCredentials, err := locator.GetElevationCredentials()
-		if err != nil {
-			return result.ExitCode, result.Error
-		}
+		util.AssertEE(err, "Failed to get elevation credentials!", constants.ExitInvalidRemoteCredentials)
 		if elevationCredentials.Kind == REMOTE_ELEVATION_NONE {
 			return result.ExitCode, result.Error
 		}

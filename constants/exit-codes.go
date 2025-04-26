@@ -12,6 +12,7 @@ const (
 	ExitUserInvalidInput           = 134
 	ExitAppDefinitionLoadFailed    = 135
 	ExitActiveModelLoadFailed      = 136
+	ExitInvalidRemoteCredentials   = 137
 
 	ExitInvalidArgs       = 148
 	ExitEliNotFound       = 149
