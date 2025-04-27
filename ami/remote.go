@@ -37,7 +37,8 @@ var TEZBAKE_POSSIBLE_RESIDUES = []string{
 }
 
 var (
-	REMOTE_VARS = make(map[string]string)
+	REMOTE_VARS               = make(map[string]string)
+	elevationCredentialsCache = make(map[string]*RemoteElevateCredentials)
 )
 
 type RemoteElevationKind string
@@ -74,7 +75,7 @@ func (creds *RemoteElevateCredentials) ToEnvMap() *map[string]string {
 }
 
 type RemoteConfiguration struct {
-	ElevationCredentialsDirectory string
+	ElevationCredentialsDirectory string                    `json:"elevation_credentials_directory"`
 	App                           string                    `json:"app"`
 	Host                          string                    `json:"host"`
 	Username                      string                    `json:"username"`
@@ -108,10 +109,13 @@ func (config *RemoteConfiguration) GetElevationCredentials() (*RemoteElevateCred
 		return config.ElevationCredentials, nil
 	}
 
+	if credentials, ok := elevationCredentialsCache[config.ElevationCredentialsDirectory]; ok {
+		return credentials, nil
+	}
+
 	encPath := filepath.Join(config.ElevationCredentialsDirectory, ElevationCredentialsEncFile)
 	plainPath := filepath.Join(config.ElevationCredentialsDirectory, ElevationCredentialsFile)
 
-	// TODO: cache
 	if _, err := os.Stat(encPath); !os.IsNotExist(err) {
 		var password string
 		prompt := &survey.Password{
@@ -144,6 +148,7 @@ func (config *RemoteConfiguration) GetElevationCredentials() (*RemoteElevateCred
 
 		credentials.Kind = config.Elevate
 		config.ElevationCredentials = &credentials
+		elevationCredentialsCache[config.ElevationCredentialsDirectory] = &credentials
 		return &credentials, nil
 	}
 
@@ -158,6 +163,7 @@ func (config *RemoteConfiguration) GetElevationCredentials() (*RemoteElevateCred
 			return nil, err
 		}
 		config.ElevationCredentials = &credentials
+		elevationCredentialsCache[config.ElevationCredentialsDirectory] = &credentials
 		return &credentials, nil
 	}
 

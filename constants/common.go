@@ -1,8 +1,6 @@
 package constants
 
 const (
-	VERSION = "0.17.0-alpha.7"
-
 	TezbakeRepository string = "tez-capital/tezbake"
 
 	DefaultBBDirectory string = "/bake-buddy"
