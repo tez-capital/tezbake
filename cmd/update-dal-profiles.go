@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/samber/lo"
 	"github.com/tez-capital/tezbake/apps"
 	"github.com/tez-capital/tezbake/constants"
 	"github.com/tez-capital/tezbake/system"
@@ -70,7 +71,7 @@ var updateDalProfilesCmd = &cobra.Command{
 
 		log.Info("Attester profiles resolved successfully, updating dal node...", fmt.Sprintf("profiles=%v", profiles))
 
-		err := apps.DalNode.SetAttesterProfiles(profiles)
+		err := apps.DalNode.SetAttesterProfiles(lo.Uniq(profiles))
 		util.AssertEE(err, "Failed to set attester profiles!", constants.ExitAppConfigurationLoadFailed)
 
 		exitCode, err := apps.DalNode.Execute("setup", "--configure") // reconfigure to apply changes
