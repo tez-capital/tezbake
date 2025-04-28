@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/tez-capital/tezbake/cli"
@@ -37,8 +38,9 @@ var TEZBAKE_POSSIBLE_RESIDUES = []string{
 }
 
 var (
-	REMOTE_VARS               = make(map[string]string)
-	elevationCredentialsCache = make(map[string]*RemoteElevateCredentials)
+	REMOTE_VARS                       = make(map[string]string)
+	elevationCredentialsCache         = make(map[string]*RemoteElevateCredentials)
+	elevationCredentialsPasswordCache = make([]string, 0, 2)
 )
 
 type RemoteElevationKind string
@@ -116,14 +118,25 @@ func (config *RemoteConfiguration) GetElevationCredentials() (*RemoteElevateCred
 	encPath := filepath.Join(config.ElevationCredentialsDirectory, ElevationCredentialsEncFile)
 	plainPath := filepath.Join(config.ElevationCredentialsDirectory, ElevationCredentialsFile)
 
+	tryDecrypt := func(password string, data []byte) ([]byte, error) {
+		if len(data) < 16 {
+			return nil, errors.New("data is too short to decrypt")
+		}
+		salt := data[len(data)-16:]
+		encData := data[:len(data)-16]
+
+		key := util.PrepareAESKey(password, salt)
+		decData, err := util.DecryptAES(key, encData)
+		if err != nil {
+			return nil, err
+		}
+		return decData, nil
+	}
+
 	if _, err := os.Stat(encPath); !os.IsNotExist(err) {
 		var password string
 		prompt := &survey.Password{
-			Message: "Enter password to unlock credentials for elevation:",
-		}
-		err := survey.AskOne(prompt, &password)
-		if err != nil {
-			return nil, err
+			Message: fmt.Sprintf("Enter password to unlock credentials for elevation (%s):", config.App),
 		}
 
 		encFileData, err := os.ReadFile(encPath)
@@ -131,14 +144,27 @@ func (config *RemoteConfiguration) GetElevationCredentials() (*RemoteElevateCred
 			return nil, err
 		}
 
-		// read 128 bit salt from the end of the file
-		salt := encFileData[len(encFileData)-16:]
-		encData := encFileData[:len(encFileData)-16]
+		var decData []byte
+		// try to decrypt with cached password
+		for _, password := range elevationCredentialsPasswordCache {
+			decData, err = tryDecrypt(password, encFileData)
+			if err == nil {
+				break
+			}
+		}
 
-		key := util.PrepareAESKey(password, salt)
-		decData, err := util.DecryptAES(key, encData)
+		if decData == nil {
+			err = survey.AskOne(prompt, &password)
+			if err != nil {
+				return nil, err
+			}
+		}
+		decData, err = tryDecrypt(password, encFileData)
 		if err != nil {
 			return nil, err
+		}
+		if !slices.Contains(elevationCredentialsPasswordCache, password) {
+			elevationCredentialsPasswordCache = append(elevationCredentialsPasswordCache, password)
 		}
 
 		var credentials RemoteElevateCredentials
@@ -355,6 +381,7 @@ func setupTezbakeForRemote(sshClient *ssh.Client, sftp *sftp.Client, locator *Re
 		architecture, err := getRemoteArchitecture(sshClient)
 		util.AssertE(err, "Failed to get remote architecture!")
 
+		// TODO: disable prelease or mathcing version?
 		binaryName := fmt.Sprintf("tezbake-%s", architecture)
 		release, err := util.FetchGithubRelease(context.Background(), true, tagName)
 		util.AssertE(err, "failed to fetch tezbake release")
