@@ -158,10 +158,10 @@ func (config *RemoteConfiguration) GetElevationCredentials() (*RemoteElevateCred
 			if err != nil {
 				return nil, err
 			}
-		}
-		decData, err = tryDecrypt(password, encFileData)
-		if err != nil {
-			return nil, err
+			decData, err = tryDecrypt(password, encFileData)
+			if err != nil {
+				return nil, err
+			}
 		}
 		if !slices.Contains(elevationCredentialsPasswordCache, password) {
 			elevationCredentialsPasswordCache = append(elevationCredentialsPasswordCache, password)
@@ -381,9 +381,8 @@ func setupTezbakeForRemote(sshClient *ssh.Client, sftp *sftp.Client, locator *Re
 		architecture, err := getRemoteArchitecture(sshClient)
 		util.AssertE(err, "Failed to get remote architecture!")
 
-		// TODO: disable prelease or mathcing version?
 		binaryName := fmt.Sprintf("tezbake-%s", architecture)
-		release, err := util.FetchGithubRelease(context.Background(), true, tagName)
+		release, err := util.FetchGithubRelease(context.Background(), false, tagName)
 		util.AssertE(err, "failed to fetch tezbake release")
 		url, _, err := release.FindAsset(binaryName)
 		util.AssertE(err, "failed to find tezbake asset in github release")
