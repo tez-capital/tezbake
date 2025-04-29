@@ -167,9 +167,9 @@ var setupCmd = &cobra.Command{
 			dalModel, err := apps.DalNode.GetActiveModel()
 			util.AssertEE(err, "Failed to load dal active mode!", constants.ExitActiveModelLoadFailed)
 
-			nodeEndpoint, nodeEndpointFound := nodeModel["RPC_ADDR"].(string)
+			nodeEndpoint, nodeEndpointFound := nodeModel["LOCAL_RPC_ADDR"].(string)
 			nodeDalEndpoint, _ := nodeModel["DAL_NODE"].(string)
-			dalEndpoint, dalEndpointFound := dalModel["RPC_ADDR"].(string)
+			dalEndpoint, dalEndpointFound := dalModel["LOCAL_RPC_ADDR"].(string)
 			dalNodeEndpoint, _ := dalModel["NODE_ENDPOINT"].(string)
 
 			util.AssertB(nodeEndpointFound, "Failed to get node endpoint!")
