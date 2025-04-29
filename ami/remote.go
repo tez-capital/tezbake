@@ -450,14 +450,11 @@ func executePreparationStage(config *RemoteConfiguration, mode string, key []byt
 	setupTezbakeForRemote(sshClient, sftp, config, "latest")
 
 	log.Trace("Injecting ssh keys...")
-	// prepare .ssh
-	err := sftp.MkdirAll("~/.ssh")
-	util.AssertE(err, "Failed to prepare directory for authorized keys!")
 	// read prepared pub key
 	pubKey, err := os.ReadFile(config.PublicKey)
 	util.AssertE(err, "Failed to locate public key!")
 	// write if necessary
-	result := system.RunSshCommand(sshClient, fmt.Sprintf("grep \"%s\" ~/.ssh/authorized_keys || echo \"%s\" >> ~/.ssh/authorized_keys", pubKey, pubKey), nil)
+	result := system.RunSshCommand(sshClient, fmt.Sprintf("mkdir -p ~/.ssh; grep \"%s\" ~/.ssh/authorized_keys || echo \"%s\" >> ~/.ssh/authorized_keys", pubKey, pubKey), nil)
 	util.AssertE(result.Error, "Failed to inject BB public key!")
 	log.Info("Remote prepared!")
 }
