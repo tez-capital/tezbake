@@ -9,6 +9,5 @@ const (
 
 	DefaultAppJsonName string = "app.json"
 
-	// TODO: update after tzkt releases new version
-	TzktConsensusKeyCheckingEndpoint = "https://staging.api.tzkt.io/"
+	TzktConsensusKeyCheckingEndpoint = "https://api.tzkt.io/"
 )
