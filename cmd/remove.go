@@ -3,9 +3,14 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/samber/lo"
 	"github.com/tez-capital/tezbake/apps"
+	"github.com/tez-capital/tezbake/apps/base"
 	"github.com/tez-capital/tezbake/cli"
+	"github.com/tez-capital/tezbake/constants"
 	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
 
@@ -27,6 +32,27 @@ var removeCmd = &cobra.Command{
 			FallbackSelection: AllFallback,
 		})
 		removingAllInstalled := len(selectedApps) == len(apps.GetInstalledApps())
+
+		if system.IsTty() {
+			proceed := false
+			appsToRemove := strings.Join(lo.Map(selectedApps, func(app base.BakeBuddyApp, _ int) string {
+				return app.GetId()
+			}), ", ")
+			var prompt string
+			switch {
+			case removingAllInstalled && shouldRemoveAll:
+				prompt = "Are you sure you want to remove all files related to tezbake instance? (y/n)"
+			case shouldRemoveAll:
+				prompt = fmt.Sprintf("Are you sure you want to remove all files related to %s? (y/n) ", appsToRemove)
+			default:
+				prompt = fmt.Sprintf("Are you sure you want to remove %s data? (y/n) ", appsToRemove)
+			}
+			survey.AskOne(&survey.Confirm{Message: prompt}, &proceed)
+			if !proceed {
+				log.Info("Aborting removal.")
+				os.Exit(constants.ExitOperationCanceled)
+			}
+		}
 
 		for _, v := range selectedApps {
 			exitCode, err := v.Remove(shouldRemoveAll)

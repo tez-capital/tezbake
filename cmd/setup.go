@@ -123,6 +123,11 @@ var setupCmd = &cobra.Command{
 			if v.IsInstalled() && !force {
 				proceed := false
 				if system.IsTty() {
+					if ctx.Remote != "" && !v.IsRemoteApp() {
+						log.Errorf("You have already installed %s locally. Please remove it first!", v.GetId())
+						os.Exit(constants.ExitNotSupported)
+					}
+
 					prompt := &survey.Confirm{
 						Message: fmt.Sprintf("Existing setup of '%s' found. Do you want to merge?", v.GetId()),
 					}
