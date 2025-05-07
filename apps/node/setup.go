@@ -3,9 +3,11 @@ package node
 import (
 	"fmt"
 	"os"
+	"path"
 
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps/base"
+	"github.com/tez-capital/tezbake/apps/signer"
 	"github.com/tez-capital/tezbake/constants"
 	"github.com/tez-capital/tezbake/util"
 
@@ -59,25 +61,40 @@ func (app *Node) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 			}
 		}
 
-		ami.WriteRemoteLocator(app.GetPath(), config, ctx.RemoteReset)
+		locator = ami.WriteRemoteLocator(app.GetPath(), config, ctx.RemoteReset)
 		err = ami.PrepareRemote(app.GetPath(), config, ctx.RemoteAuth)
 		if err != nil {
 			return -1, fmt.Errorf("failed to create remote node locator - %s", err.Error())
 		}
 
-		// TODO: remove with RemoteUser references
-		// if ctx.RemoteUser != "" {
-		// 	ctx.User = ctx.RemoteUser
-		// }
-
-		if ctx.RemoteElevate != ami.REMOTE_ELEVATION_NONE && locator != nil {
-			// override with username we use to connect to remote
-			// se we do not have to prompt for elevation when collecting info and other common tasks
-			ctx.User = locator.Username
-		}
+		// on remote we need to use locator username
+		ctx.User = locator.Username
 	case app.IsRemoteApp():
 		log.Warn("Found remote app locator. Setup will run on remote.")
 		ami.SetupRemoteTezbake(app.GetPath(), "latest")
+
+		locator, err := ami.LoadRemoteLocator(app.GetPath())
+		if err != nil {
+			return -1, fmt.Errorf("failed to load remote locator - %s", err.Error())
+		}
+		// on remote we need to use locator username
+		ctx.User = locator.Username
+
+		// patch missing local_username
+		// TODO: remove this after October 2025
+		// everyone should use local_username at that point
+		if locator.LocalUsername == "" {
+			definition, _, err := signer.FromPath("").LoadAppDefinition()
+			if err != nil {
+				return -1, fmt.Errorf("failed to load signer definition - %s", err.Error())
+			}
+			if user, ok := definition["user"].(string); ok {
+				locator.LocalUsername = user
+			} else {
+				return -1, fmt.Errorf("failed to load signer definition - unexpected format")
+			}
+			ami.WriteRemoteLocator(app.GetPath(), locator, false)
+		}
 	}
 
 	appDef, err := base.GenerateConfiguration(app.GetAmiTemplate(ctx), ctx)
@@ -97,5 +114,19 @@ func (app *Node) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 		return -1, fmt.Errorf("failed to write app definition - %s", err.Error())
 	}
 
-	return ami.SetupApp(app.GetPath(), args...)
+	exitCode, err := ami.SetupApp(app.GetPath(), args...)
+	if err != nil || exitCode != 0 {
+		return exitCode, err
+	}
+
+	if app.IsRemoteApp() {
+		// we need to set permissions for remote apps
+		// while apps set their permissions automatically during setup
+		// remote apps need to set permissions manually as setup is run on remote
+		user := app.GetUser()
+		if user != "" {
+			util.ChownR(user, path.Join(app.GetPath()))
+		}
+	}
+	return 0, nil
 }

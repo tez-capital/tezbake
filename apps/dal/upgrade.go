@@ -27,14 +27,18 @@ func (app *DalNode) Upgrade(ctx *base.UpgradeContext, args ...string) (int, erro
 	if err != nil {
 		return exitCode, err
 	}
-	if !isRemote {
+
+	if isRemote {
+		// we need to set permissions for remote apps
+		// while apps set their permissions automatically during setup
+		// remote apps need to set permissions manually as setup is run on remote
 		user := app.GetUser()
-		if user != "" && user != "root" {
+		if user != "" {
 			util.ChownR(user, path.Join(app.GetPath()))
 		}
 	}
 
-	if !isRemote && wasRunning {
+	if wasRunning {
 		exitCode, err := app.Start()
 		if err != nil {
 			return exitCode, err

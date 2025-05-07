@@ -33,6 +33,7 @@ func (ctx *SetupContext) ToRemoteConfiguration(app BakeBuddyApp) *ami.RemoteConf
 		ElevationCredentialsDirectory: app.GetPath(),
 		App:                           app.GetId(),
 		Username:                      connectionDetails.Username,
+		LocalUsername:                 ctx.User,
 		Host:                          connectionDetails.Host,
 		Port:                          connectionDetails.Port,
 		InstancePath:                  constants.DefaultBBDirectory,

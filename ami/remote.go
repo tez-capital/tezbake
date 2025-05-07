@@ -81,6 +81,7 @@ type RemoteConfiguration struct {
 	App                           string                    `json:"app"`
 	Host                          string                    `json:"host"`
 	Username                      string                    `json:"username"`
+	LocalUsername                 string                    `json:"local_username"`
 	InstancePath                  string                    `json:"path"`
 	Elevate                       RemoteElevationKind       `json:"elevate"`
 	PrivateKey                    string                    `json:"privateKey"`
@@ -258,10 +259,10 @@ func IsRemoteApp(appDir string) (bool, *RemoteConfiguration) {
 	return err == nil, locator
 }
 
-func GetAppKeyPair(appDir string, reset bool) *AppKeyPair {
+func GetAppKeyPair(appDir string, rekey bool) *AppKeyPair {
 	var err error
 	remoteConfiguration := &RemoteConfiguration{}
-	if !reset {
+	if !rekey {
 		remoteConfiguration, err = LoadRemoteLocator(appDir)
 		if err != nil {
 			return GetNewAppKeyPair()
@@ -281,11 +282,11 @@ func GetAppKeyPair(appDir string, reset bool) *AppKeyPair {
 	}
 }
 
-func WriteRemoteLocator(appDir string, rc *RemoteConfiguration, reset bool) {
+func WriteRemoteLocator(appDir string, rc *RemoteConfiguration, rekey bool) *RemoteConfiguration {
 	log.Trace("Writing locator of '" + appDir + "' for '" + rc.InstancePath + "'...")
 	util.AssertEE(os.MkdirAll(appDir, os.ModePerm), "Failed to create node directory!", constants.ExitIOError)
 
-	bbKeyPair := GetAppKeyPair(appDir, reset)
+	bbKeyPair := GetAppKeyPair(appDir, rekey)
 	err := os.WriteFile(rc.PublicKey, []byte(strings.Trim(string(bbKeyPair.PublicKey), " \n")), 0644)
 	util.AssertE(err, "Failed to write public key!")
 	err = os.WriteFile(rc.PrivateKey, bbKeyPair.PrivateKey, 0600)
@@ -297,6 +298,7 @@ func WriteRemoteLocator(appDir string, rc *RemoteConfiguration, reset bool) {
 	util.AssertEE(os.WriteFile(remoteConfigurationPath, serializedRemoteConfiguration, 0644), "Failed to write remote app locator!", constants.ExitIOError)
 
 	remoteLocatorsCache[appDir] = rc // cache config
+	return rc
 }
 
 func WriteRemoteElevationCredentials(appDir string, config *RemoteConfiguration, credentials *RemoteElevateCredentials) {

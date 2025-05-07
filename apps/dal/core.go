@@ -51,6 +51,15 @@ func (app *DalNode) GetId() string {
 }
 
 func (app *DalNode) GetUser() string {
+	if app.IsRemoteApp() {
+		locator, err := ami.LoadRemoteLocator(app.GetPath())
+		if err != nil {
+			log.Warnf("Failed to load %s locator (%s)!", app.GetId(), err.Error())
+			return ""
+		}
+		return locator.LocalUsername
+	}
+
 	def, _, err := base.LoadAppDefinition(app)
 	if err != nil {
 		log.Warnf("Failed to load %s definition (%s)!", app.GetId(), err.Error())
