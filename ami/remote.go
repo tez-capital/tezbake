@@ -547,27 +547,6 @@ func (session *TezbakeRemoteSession) prepareArgsForAmiForward(workingDir string,
 		forwardArgs = append(forwardArgs, fmt.Sprintf("--remote-instance-vars=%s", strings.Join(remoteVarsWithValues, ";")))
 	}
 
-	if session.instancePath != "" { // strip --path/-p
-		strippedArgs := make([]string, 0)
-		skip := false
-		for _, v := range args {
-			if skip {
-				skip = false
-				continue
-			}
-			if v == "-p" || v == "--path" {
-				skip = true
-				continue
-			}
-			if strings.HasPrefix(v, "-p=") || strings.HasPrefix(v, "--path=") {
-				continue
-			}
-			strippedArgs = append(strippedArgs, v)
-		}
-		args = strippedArgs
-		forwardArgs = append(forwardArgs, "--path", session.instancePath)
-	}
-
 	forwardArgs = append(forwardArgs, "execute-ami")
 	if cli.ElevationRequired {
 		forwardArgs = append(forwardArgs, "--elevate")
@@ -591,7 +570,6 @@ func (session *TezbakeRemoteSession) ForwardAmiExecute(workingDir string, args .
 	if err != nil {
 		return -1, err
 	}
-
 	result := runSshCommand(session.sshClient, strings.Join(forwardArgs, " "), session.locator, system.RunPipedSshCommand)
 	return result.ExitCode, result.Error
 }

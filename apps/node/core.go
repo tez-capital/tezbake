@@ -40,10 +40,16 @@ func FromPath(path string) *Node {
 }
 
 func (app *Node) GetPath() string {
+	appPath := path.Join(cli.BBdir, Id)
 	if app.Path != "" {
-		return app.Path
+		appPath = path.Join(app.Path, Id)
 	}
-	return path.Join(cli.BBdir, Id)
+
+	if isRemote, locator := ami.IsRemoteApp(appPath); isRemote {
+		return path.Join(locator.InstancePath, locator.App)
+	}
+
+	return appPath
 }
 
 func (app *Node) GetId() string {
@@ -51,12 +57,7 @@ func (app *Node) GetId() string {
 }
 
 func (app *Node) GetUser() string {
-	if app.IsRemoteApp() {
-		locator, err := ami.LoadRemoteLocator(app.GetPath())
-		if err != nil {
-			log.Warnf("Failed to load %s locator (%s)!", app.GetId(), err.Error())
-			return ""
-		}
+	if isRemote, locator := ami.IsRemoteApp(app.GetPath()); isRemote {
 		return locator.LocalUsername
 	}
 

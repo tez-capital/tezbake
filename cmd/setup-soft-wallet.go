@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"path"
-	"strings"
 
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps"
@@ -24,11 +23,10 @@ var setupSoftWalletCmd = &cobra.Command{
 
 		shouldOperateOnSigner, _ := cmd.Flags().GetBool("signer")
 		shouldOperateOnNode, _ := cmd.Flags().GetBool("node")
-		shouldOperateOnDal, _ := cmd.Flags().GetBool("dal")
 		force, _ := cmd.Flags().GetBool("force")
 		keyAlias, _ := cmd.Flags().GetString("key-alias")
 
-		isAnySelected := shouldOperateOnSigner || shouldOperateOnNode || shouldOperateOnDal
+		isAnySelected := shouldOperateOnSigner || shouldOperateOnNode
 
 		if (shouldOperateOnSigner || !isAnySelected) && apps.Signer.IsInstalled() {
 			log.Info("setting up ledger for signer...")
@@ -102,31 +100,12 @@ var setupSoftWalletCmd = &cobra.Command{
 			exitCode, err = apps.Node.Execute(amiArgs...)
 			util.AssertEE(err, "Failed to import key to node!", exitCode)
 		}
-
-		if (shouldOperateOnDal || !isAnySelected) && apps.DalNode.IsInstalled() {
-			util.AssertBE(apps.Node.IsInstalled(), "node is not installed - can not import keys to dal node", constants.ExitAppNotInstalled)
-
-			output, exitCode, err := apps.Node.ExecuteGetOutput("list-bakers")
-			util.AssertEE(err, "Failed to get baker key hash!", exitCode)
-			util.AssertB(exitCode == 0, "Failed to get baker key hash!")
-
-			keys := strings.Split(strings.TrimSpace(string(output)), "\n")
-			log.Info("Importing keys to dal node...", fmt.Sprintf("keys=%v", keys))
-			err = apps.DalNode.SetAttesterProfiles(keys)
-			util.AssertEE(err, "Failed to set attester profiles!", constants.ExitAppConfigurationLoadFailed)
-
-			exitCode, err = apps.DalNode.Execute("setup", "--configure") // reconfigure to apply changes
-			util.AssertEE(err, "Failed to reconfigure dal node!", exitCode)
-			util.AssertBE(exitCode == 0, "Failed to setup dal node!", exitCode)
-			log.Info("Keys imported into dal node!")
-		}
 	},
 }
 
 func init() {
 	setupSoftWalletCmd.Flags().Bool("node", false, "Import key to node (affects import-key only)")
 	setupSoftWalletCmd.Flags().Bool("signer", false, "Import key to signer (affects import-key only)")
-	setupSoftWalletCmd.Flags().Bool("dal", false, "Import key to dal node (affects import-key only)")
 
 	setupSoftWalletCmd.Flags().String("import-key", "", "Import key")
 	setupSoftWalletCmd.Flags().String("generate", "ed25519", "Generate key")

@@ -28,10 +28,15 @@ func findAppDefinitionRemote(sftpClient *sftp.Client, workingDir string) (map[st
 			log.Trace("App definition found in " + appDefPath)
 			appDef := make(map[string]interface{})
 			appDefContent, err := io.ReadAll(appDefFile)
-			if err == nil {
-				err = hjson.Unmarshal(appDefContent, &appDef)
-				return appDef, appDefPath, err
+			if err != nil {
+				return nil, "", err
 			}
+
+			err = hjson.Unmarshal(appDefContent, &appDef)
+			if err != nil {
+				return nil, "", err
+			}
+			return appDef, appDefPath, err
 		}
 	}
 	return nil, "", errors.New("failed to load app configuration (no valid configuration found)")
@@ -216,13 +221,19 @@ func WriteAppDefinition(workingDir string, configuration map[string]interface{},
 	return os.Rename(newAppDefPath, appDefPath)
 }
 
-func ReadAppDefinition(workingDir string, appConfigPath string) (*map[string]interface{}, error) {
-	if isRemote, _ := IsRemoteApp(workingDir); isRemote {
-		// session, err := locator.OpenAppRemoteSessionS()
-		// if err != nil {
-		// 	return nil, err
-		// }
-		return nil, errors.New("not supported")
+func ReadAppDefinition(workingDir string, appConfigPath string) (map[string]interface{}, error) {
+	if isRemote, locator := IsRemoteApp(workingDir); isRemote {
+		session, err := locator.OpenAppRemoteSession()
+		if err != nil {
+			return nil, err
+		}
+		defer session.Close()
+
+		appDef, _, err := findAppDefinitionRemote(session.sftpSession, path.Join(locator.InstancePath, locator.App))
+		if err != nil {
+			return nil, err
+		}
+		return appDef, nil
 	}
 	var appDefPath string
 
@@ -240,5 +251,5 @@ func ReadAppDefinition(workingDir string, appConfigPath string) (*map[string]int
 	if err != nil {
 		return nil, err
 	}
-	return &result, nil
+	return result, nil
 }
