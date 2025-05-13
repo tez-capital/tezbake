@@ -25,33 +25,46 @@ var removeCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		system.RequireElevatedUser()
 
-		shouldRemoveAll, _ := cmd.Flags().GetBool("all")
+		shouldRemoveAll := util.GetCommandBoolFlagS(cmd, "all")
+		force := util.GetCommandBoolFlagS(cmd, "force")
 
 		selectedApps := GetAppsBySelectionCriteria(cmd, AppSelectionCriteria{
-			InitialSelection:  InstalledApps,
+			InitialSelection:  AllApps,
 			FallbackSelection: AllFallback,
 		})
+
 		removingAllInstalled := len(selectedApps) == len(apps.GetInstalledApps())
 
-		if system.IsTty() {
-			proceed := false
+		proceed := force
+		if system.IsTty() && !force {
 			appsToRemove := strings.Join(lo.Map(selectedApps, func(app base.BakeBuddyApp, _ int) string {
-				return app.GetId()
+				return strings.ToUpper(app.GetId())
 			}), ", ")
 			var prompt string
+			fmt.Println("")
+			fmt.Println("!!!!!! WARNING !!!!!!")
+			fmt.Println("")
 			switch {
 			case removingAllInstalled && shouldRemoveAll:
-				prompt = "Are you sure you want to remove all files related to tezbake instance? (y/n)"
+				prompt = "Are you sure you want to remove all files related to tezbake instance?"
 			case shouldRemoveAll:
-				prompt = fmt.Sprintf("Are you sure you want to remove all files related to %s? (y/n) ", appsToRemove)
+				prompt = fmt.Sprintf("Are you sure you want to remove all files related to %s?", appsToRemove)
 			default:
-				prompt = fmt.Sprintf("Are you sure you want to remove %s data? (y/n) ", appsToRemove)
+				prompt = fmt.Sprintf("Are you sure you want to remove %s data?", appsToRemove)
 			}
 			survey.AskOne(&survey.Confirm{Message: prompt}, &proceed)
-			if !proceed {
-				log.Info("Aborting removal.")
-				os.Exit(constants.ExitOperationCanceled)
+			if proceed {
+				proceed = false
+				abort := false
+				fmt.Println("")
+				prompt = "This operation is irreversible. Do you want to abort?"
+				survey.AskOne(&survey.Confirm{Message: prompt}, &abort)
+				proceed = !abort
 			}
+		}
+		if !proceed {
+			log.Info("Aborting removal.")
+			os.Exit(constants.ExitOperationCanceled)
 		}
 
 		for _, v := range selectedApps {
@@ -71,5 +84,6 @@ func init() {
 		removeCmd.Flags().Bool(v.GetId(), false, fmt.Sprintf("Removes %s.", v.GetId()))
 	}
 	removeCmd.Flags().BoolP("all", "a", false, "Removes all files related to BB instance.")
+	removeCmd.Flags().Bool("force", false, "Forces removal without confirmation.")
 	RootCmd.AddCommand(removeCmd)
 }
