@@ -139,6 +139,13 @@ func TestMergeMapsDeep(t *testing.T) {
 			overwrite: false,
 			expected:  map[string]any{"a": map[string]any{"x": 1}},
 		},
+		{
+			name:      "Do not overwrite if src is empty",
+			dst:       map[string]any{"a": map[string]any{"x": 1}},
+			src:       map[string]any{},
+			overwrite: true,
+			expected:  map[string]any{"a": map[string]any{"x": 1}},
+		},
 	}
 
 	for _, tt := range tests {

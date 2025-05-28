@@ -38,7 +38,7 @@ func AssignStructFieldsIfEmptyR(targetReflect reflect.Value, sourceReflect refle
 
 }
 
-func AssignStructFieldsIfEmpty[T interface{}](target *T, source *T) {
+func AssignStructFieldsIfEmpty[T any](target *T, source *T) {
 	targetReflect := reflect.ValueOf(target).Elem()
 	sourceReflect := reflect.ValueOf(source).Elem()
 	AssignStructFieldsIfEmptyR(targetReflect, sourceReflect)

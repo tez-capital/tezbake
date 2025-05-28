@@ -64,7 +64,7 @@ var versionCmd = &cobra.Command{
 			})
 			switch {
 			case cli.JsonLogFormat:
-				result := make(map[string]interface{})
+				result := make(map[string]any)
 				result["tezbake"] = constants.VERSION
 				for i, v := range appsToCollectFrom {
 					versions := appVersions[i]
@@ -111,7 +111,7 @@ var versionCmd = &cobra.Command{
 
 			switch {
 			case cli.JsonLogFormat:
-				result := make(map[string]interface{})
+				result := make(map[string]any)
 				result["tezbake"] = constants.VERSION
 				for i, v := range appsToCollectFrom {
 					version := appVersions[i]

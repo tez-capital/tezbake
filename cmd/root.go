@@ -41,7 +41,7 @@ func (f *bbJsonFormatter) Format(entry *log.Entry) ([]byte, error) {
 	if err != nil {
 		return []byte{}, err
 	}
-	result := make(map[string]interface{})
+	result := make(map[string]any)
 	err = json.Unmarshal(l, &result)
 	if err != nil {
 		return []byte{}, err

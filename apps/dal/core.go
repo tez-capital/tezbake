@@ -14,11 +14,11 @@ import (
 )
 
 var (
-	Id           string                 = constants.DalAppId
-	AMI_TEMPLATE map[string]interface{} = map[string]interface{}{
+	Id           string         = constants.DalAppId
+	AMI_TEMPLATE map[string]any = map[string]any{
 		"id":   constants.DalAppId,
-		"type": map[string]interface{}{"id": "xtz.dal", "version": "latest"},
-		"configuration": map[string]interface{}{
+		"type": map[string]any{"id": "xtz.dal", "version": "latest"},
+		"configuration": map[string]any{
 			"NODE_ENDPOINT": "http://127.0.0.1:8732",
 		},
 		"user": "",
@@ -79,7 +79,7 @@ func (app *DalNode) GetLabel() string {
 	return strings.ToUpper(app.GetId())
 }
 
-func (app *DalNode) GetAmiTemplate(ctx *base.SetupContext) map[string]interface{} {
+func (app *DalNode) GetAmiTemplate(ctx *base.SetupContext) map[string]any {
 	return AMI_TEMPLATE
 }
 

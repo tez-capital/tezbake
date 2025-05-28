@@ -4,14 +4,14 @@ import (
 	"github.com/tez-capital/tezbake/apps/base"
 )
 
-func (app *Peak) LoadAppDefinition() (map[string]interface{}, string, error) {
+func (app *Peak) LoadAppDefinition() (map[string]any, string, error) {
 	return base.LoadAppDefinition(app)
 }
 
-func (app *Peak) LoadAppConfiguration() (map[string]interface{}, error) {
+func (app *Peak) LoadAppConfiguration() (map[string]any, error) {
 	return base.LoadAppConfiguration(app)
 }
 
-func (app *Peak) GetActiveModel() (map[string]interface{}, error) {
+func (app *Peak) GetActiveModel() (map[string]any, error) {
 	return base.GetActiveModel(app)
 }

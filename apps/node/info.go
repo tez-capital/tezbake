@@ -24,7 +24,7 @@ type Info struct {
 	Type                string                         `json:"type"`
 	Version             string                         `json:"version"`
 	VotingCurrentPeriod VotingCurrentPeriod            `json:"voting_current_period"`
-	VotingProposals     []interface{}                  `json:"voting_proposals"`
+	VotingProposals     []any                          `json:"voting_proposals"`
 	IsRemote            bool                           `json:"isRemote"`
 }
 

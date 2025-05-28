@@ -11,11 +11,11 @@ import (
 )
 
 var (
-	Id           string                 = constants.TezpayAppId
-	AMI_TEMPLATE map[string]interface{} = map[string]interface{}{
+	Id           string         = constants.TezpayAppId
+	AMI_TEMPLATE map[string]any = map[string]any{
 		"id":            constants.TezpayAppId,
-		"type":          map[string]interface{}{"id": "tzc.tezpay", "version": "latest"},
-		"configuration": map[string]interface{}{},
+		"type":          map[string]any{"id": "tzc.tezpay", "version": "latest"},
+		"configuration": map[string]any{},
 		"user":          "",
 	}
 )
@@ -49,7 +49,7 @@ func (app *Tezpay) GetLabel() string {
 	return strings.ToUpper(app.GetId())
 }
 
-func (app *Tezpay) GetAmiTemplate(ctx *base.SetupContext) map[string]interface{} {
+func (app *Tezpay) GetAmiTemplate(ctx *base.SetupContext) map[string]any {
 	return AMI_TEMPLATE
 }
 func (app *Tezpay) IsInstalled() bool {

@@ -23,14 +23,14 @@ var infoCmd = &cobra.Command{
 			timeout = 5
 		}
 
-		result := map[string]interface{}{}
+		result := map[string]any{}
 
 		for _, v := range GetAppsBySelectionCriteria(cmd, AppSelectionCriteria{
 			InitialSelection:  InstalledApps,
 			FallbackSelection: ImplicitApps,
 			OptionCheckType:   InfoOptionCheck,
 		}) {
-			options := map[string]interface{}{
+			options := map[string]any{
 				"timeout": timeout,
 			}
 			for _, option := range v.GetAvailableInfoCollectionOptions() {

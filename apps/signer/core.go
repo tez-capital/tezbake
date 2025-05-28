@@ -12,11 +12,11 @@ import (
 )
 
 var (
-	Id           string                 = constants.SignerAppId
-	AMI_TEMPLATE map[string]interface{} = map[string]interface{}{
+	Id           string         = constants.SignerAppId
+	AMI_TEMPLATE map[string]any = map[string]any{
 		"id":            constants.SignerAppId,
-		"type":          map[string]interface{}{"id": "xtz.signer", "version": "latest"},
-		"configuration": map[string]interface{}{},
+		"type":          map[string]any{"id": "xtz.signer", "version": "latest"},
+		"configuration": map[string]any{},
 		"user":          "",
 	}
 )
@@ -35,14 +35,14 @@ func FromPath(path string) *Signer {
 	}
 }
 
-func (app *Signer) GetAmiTemplate(ctx *base.SetupContext) map[string]interface{} {
+func (app *Signer) GetAmiTemplate(ctx *base.SetupContext) map[string]any {
 	if ctx.Remote != "" {
 		connectionsDetails := system.GetRemoteConnectionDetails(ctx.Remote)
 		// from xtz.signer
 		// REMOTE_SSH_PORT = am.app.get_configuration("REMOTE_SSH_PORT", "22"),
 		// REMOTE_SSH_KEY = am.app.get_configuration("REMOTE_SSH_KEY"),
 		// REMOTE_NODE = am.app.get_configuration("REMOTE_NODE"),
-		configuration := AMI_TEMPLATE["configuration"].(map[string]interface{})
+		configuration := AMI_TEMPLATE["configuration"].(map[string]any)
 		configuration["REMOTE_NODE"] = connectionsDetails.Username + "@" + connectionsDetails.Host
 		configuration["REMOTE_SSH_PORT"] = connectionsDetails.Port
 		configuration["REMOTE_SSH_KEY"] = path.Join(path.Dir(app.GetPath()), "node", "idkey")

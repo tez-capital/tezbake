@@ -20,13 +20,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func findAppDefinitionRemote(sftpClient *sftp.Client, workingDir string) (map[string]interface{}, string, error) {
+func findAppDefinitionRemote(sftpClient *sftp.Client, workingDir string) (map[string]any, string, error) {
 	for _, candidate := range AppConfigurationCandidates {
 		appDefPath := path.Join(workingDir, candidate)
 		appDefFile, err := sftpClient.OpenFile(appDefPath, os.O_RDONLY)
 		if err == nil {
 			log.Trace("App definition found in " + appDefPath)
-			appDef := make(map[string]interface{})
+			appDef := make(map[string]any)
 			appDefContent, err := io.ReadAll(appDefFile)
 			if err != nil {
 				return nil, "", err
@@ -42,7 +42,7 @@ func findAppDefinitionRemote(sftpClient *sftp.Client, workingDir string) (map[st
 	return nil, "", errors.New("failed to load app configuration (no valid configuration found)")
 }
 
-func FindAppDefinition(workingDir string) (map[string]interface{}, string, error) {
+func FindAppDefinition(workingDir string) (map[string]any, string, error) {
 	if isRemote, locator := IsRemoteApp(workingDir); isRemote {
 		session, err := locator.OpenAppRemoteSession()
 		if err != nil {
@@ -58,7 +58,7 @@ func FindAppDefinition(workingDir string) (map[string]interface{}, string, error
 		appDefContent, err := os.ReadFile(appDefPath)
 		if err == nil {
 			log.Trace("App definition found in " + appDefPath)
-			appDef := make(map[string]interface{})
+			appDef := make(map[string]any)
 			err = hjson.Unmarshal(appDefContent, &appDef)
 			return appDef, appDefPath, err
 		}
@@ -66,7 +66,7 @@ func FindAppDefinition(workingDir string) (map[string]interface{}, string, error
 	return nil, "", errors.New("failed to load app configuration (no valid configuration found)")
 }
 
-func LoadAppDefinition(app string) (map[string]interface{}, error) {
+func LoadAppDefinition(app string) (map[string]any, error) {
 	log.Trace("Loading '" + app + "' definition from...")
 	appDef, _, err := FindAppDefinition(app)
 	if err != nil {
@@ -75,30 +75,30 @@ func LoadAppDefinition(app string) (map[string]interface{}, error) {
 	return appDef, nil
 }
 
-func LoadAppConfiguration(app string) (map[string]interface{}, error) {
+func LoadAppConfiguration(app string) (map[string]any, error) {
 	appDef, err := LoadAppDefinition(app)
 	if err != nil {
 		return nil, err
 	}
-	if config, ok := appDef["configuration"].(map[string]interface{}); ok {
+	if config, ok := appDef["configuration"].(map[string]any); ok {
 		return config, nil
 	}
 	return nil, fmt.Errorf("failed to load '%s' configuration - unexpected format", app)
 }
 
-func UpdateAppConfiguration(app string, configuration map[string]interface{}) error {
+func UpdateAppConfiguration(app string, configuration map[string]any) error {
 	appDef, err := LoadAppDefinition(app)
 	if err != nil {
 		return err
 	}
-	if _, ok := appDef["configuration"].(map[string]interface{}); !ok {
+	if _, ok := appDef["configuration"].(map[string]any); !ok {
 		return fmt.Errorf("failed to load '%s' configuration - unexpected format", app)
 	}
 	appDef["configuration"] = configuration
 	return WriteAppDefinition(app, appDef, constants.DefaultAppJsonName)
 }
 
-func GetAppActiveModel(workingDir string) (map[string]interface{}, error) {
+func GetAppActiveModel(workingDir string) (map[string]any, error) {
 	output, exitCode, err := ExecuteGetOutput(workingDir, "--print-model")
 	if err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ func GetAppActiveModel(workingDir string) (map[string]interface{}, error) {
 	if exitCode != 0 {
 		return nil, fmt.Errorf("failed to get active model - %s", output)
 	}
-	var model map[string]interface{}
+	var model map[string]any
 	err = hjson.Unmarshal([]byte(output), &model)
 	if err != nil {
 		return nil, err
@@ -130,7 +130,7 @@ func prepareFolderStructure(sshClient *ssh.Client, instancePath string, app stri
 	return result.Error
 }
 
-func writeAppConfigurationToRemote(session *TezbakeRemoteSession, workingDir string, configuration map[string]interface{}) error {
+func writeAppConfigurationToRemote(session *TezbakeRemoteSession, workingDir string, configuration map[string]any) error {
 	var appDef []byte
 	var appDefPath string
 	log.Tracef("Writing app configuration to remote %s...", workingDir)
@@ -183,7 +183,7 @@ func WriteFile(workingDir string, content []byte, relativePath string) error {
 	return os.WriteFile(targetPath, content, 0644)
 }
 
-func WriteAppDefinition(workingDir string, configuration map[string]interface{}, appConfigPath string) error {
+func WriteAppDefinition(workingDir string, configuration map[string]any, appConfigPath string) error {
 	if isRemote, locator := IsRemoteApp(workingDir); isRemote {
 		session, err := locator.OpenAppRemoteSession()
 		if err != nil {
@@ -221,7 +221,7 @@ func WriteAppDefinition(workingDir string, configuration map[string]interface{},
 	return os.Rename(newAppDefPath, appDefPath)
 }
 
-func ReadAppDefinition(workingDir string, appConfigPath string) (map[string]interface{}, error) {
+func ReadAppDefinition(workingDir string, appConfigPath string) (map[string]any, error) {
 	if isRemote, locator := IsRemoteApp(workingDir); isRemote {
 		session, err := locator.OpenAppRemoteSession()
 		if err != nil {
@@ -246,7 +246,7 @@ func ReadAppDefinition(workingDir string, appConfigPath string) (map[string]inte
 		return nil, err
 	}
 
-	result := make(map[string]interface{})
+	result := make(map[string]any)
 	err = hjson.Unmarshal(appDef, &result)
 	if err != nil {
 		return nil, err

@@ -24,10 +24,10 @@ var appsCmd = &cobra.Command{
 		appsTable.SetStyle(table.StyleLight)
 		appsTable.AppendHeader(table.Row{"App", "Installed?"}, table.RowConfig{AutoMerge: true})
 
-		result := map[string]interface{}{}
+		result := map[string]any{}
 		for _, v := range apps.All {
 			isInstalled := v.IsInstalled()
-			result[v.GetId()] = map[string]interface{}{
+			result[v.GetId()] = map[string]any{
 				"installed": isInstalled,
 			}
 			appsTable.AppendRow(table.Row{v.GetId(), isInstalled})

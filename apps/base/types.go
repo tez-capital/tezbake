@@ -13,14 +13,14 @@ type BakeBuddyApp interface {
 	GetPath() string
 	IsRemoteApp() bool
 	Execute(args ...string) (int, error)
-	GetAmiTemplate(ctx *SetupContext) map[string]interface{}
+	GetAmiTemplate(ctx *SetupContext) map[string]any
 	Setup(ctx *SetupContext, args ...string) (int, error)
 	Upgrade(ctx *UpgradeContext, args ...string) (int, error)
 	Stop(args ...string) (int, error)
 	Start(args ...string) (int, error)
 	Remove(all bool, args ...string) (int, error)
-	LoadAppDefinition() (map[string]interface{}, string, error)
-	LoadAppConfiguration() (map[string]interface{}, error)
+	LoadAppDefinition() (map[string]any, string, error)
+	LoadAppConfiguration() (map[string]any, error)
 	GetAvailableInfoCollectionOptions() []AmiInfoCollectionOption
 	GetInfo(optionsJson []byte) (any, error)
 	GetServiceInfo() (map[string]AmiServiceInfo, error)

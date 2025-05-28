@@ -11,11 +11,11 @@ import (
 )
 
 var (
-	Id           string                 = constants.PeakAppId
-	AMI_TEMPLATE map[string]interface{} = map[string]interface{}{
+	Id           string         = constants.PeakAppId
+	AMI_TEMPLATE map[string]any = map[string]any{
 		"id":            constants.PeakAppId,
-		"type":          map[string]interface{}{"id": "tzc.tezpeak", "version": "latest"},
-		"configuration": map[string]interface{}{},
+		"type":          map[string]any{"id": "tzc.tezpeak", "version": "latest"},
+		"configuration": map[string]any{},
 		"user":          "",
 	}
 )
@@ -34,7 +34,7 @@ func FromPath(path string) *Peak {
 	}
 }
 
-func (app *Peak) GetAmiTemplate(ctx *base.SetupContext) map[string]interface{} {
+func (app *Peak) GetAmiTemplate(ctx *base.SetupContext) map[string]any {
 	return AMI_TEMPLATE
 }
 

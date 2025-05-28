@@ -5,15 +5,15 @@ import (
 	"github.com/tez-capital/tezbake/apps/base"
 )
 
-func (app *Node) LoadAppDefinition() (map[string]interface{}, string, error) {
+func (app *Node) LoadAppDefinition() (map[string]any, string, error) {
 	return base.LoadAppDefinition(app)
 }
 
-func (app *Node) LoadAppConfiguration() (map[string]interface{}, error) {
+func (app *Node) LoadAppConfiguration() (map[string]any, error) {
 	return base.LoadAppConfiguration(app)
 }
 
-func (app *Node) GetActiveModel() (map[string]interface{}, error) {
+func (app *Node) GetActiveModel() (map[string]any, error) {
 	return base.GetActiveModel(app)
 }
 

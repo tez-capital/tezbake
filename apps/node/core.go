@@ -14,11 +14,11 @@ import (
 )
 
 var (
-	Id           string                 = constants.NodeAppId
-	AMI_TEMPLATE map[string]interface{} = map[string]interface{}{
+	Id           string         = constants.NodeAppId
+	AMI_TEMPLATE map[string]any = map[string]any{
 		"id":   constants.NodeAppId,
-		"type": map[string]interface{}{"id": "xtz.node", "version": "latest"},
-		"configuration": map[string]interface{}{
+		"type": map[string]any{"id": "xtz.node", "version": "latest"},
+		"configuration": map[string]any{
 			"NODE_TYPE": "baker",
 		},
 		"user": "",
@@ -79,7 +79,7 @@ func (app *Node) GetLabel() string {
 	return strings.ToUpper(app.GetId())
 }
 
-func (app *Node) GetAmiTemplate(ctx *base.SetupContext) map[string]interface{} {
+func (app *Node) GetAmiTemplate(ctx *base.SetupContext) map[string]any {
 	return AMI_TEMPLATE
 }
 
