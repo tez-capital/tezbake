@@ -2,7 +2,6 @@ package ami
 
 import (
 	"bufio"
-	"errors"
 	"os"
 	"os/exec"
 	"strings"
@@ -12,13 +11,9 @@ import (
 )
 
 func ExecuteRaw(args ...string) (int, error) {
-	eliPath, err := exec.LookPath("eli")
+	eliPath, amiPath, err := GetEliAndAmiPath()
 	if err != nil {
-		return -1, errors.New("eli not found")
-	}
-	amiPath, err := exec.LookPath("ami")
-	if err != nil {
-		return -1, errors.New("ami not found")
+		return -1, err
 	}
 
 	eliArgs := make([]string, 0)
@@ -39,13 +34,9 @@ func ExecuteRaw(args ...string) (int, error) {
 }
 
 func createAmiCmd(workingDir string, args ...string) (*exec.Cmd, error) {
-	eliPath, err := exec.LookPath("eli")
+	eliPath, amiPath, err := GetEliAndAmiPath()
 	if err != nil {
-		return nil, errors.New("eli not found")
-	}
-	amiPath, err := exec.LookPath("ami")
-	if err != nil {
-		return nil, errors.New("ami not found")
+		return nil, err
 	}
 
 	eliArgs := make([]string, 0)

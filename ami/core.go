@@ -2,6 +2,7 @@ package ami
 
 import (
 	"errors"
+	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
@@ -13,15 +14,44 @@ var (
 	AppConfigurationCandidates []string = []string{"app.hjson", "app.json"}
 )
 
-func EraseCache() (int, error) {
-	eliPath, err := exec.LookPath("eli")
-	if err != nil {
-		return -1, errors.New("eli not found")
+func GetFromPathCandidates(candidates []string) (string, error) {
+	for _, candidate := range candidates {
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate, nil
+		}
+	}
+	return "", errors.New("not found")
+}
+
+func GetEliAndAmiPath() (string, string, error) {
+	slog.Debug("Looking for eli and ami in PATH", "PATH", os.Getenv("PATH"))
+
+	// Try to find eli and ami in /usr/local/bin first
+	eliPath, _ := GetFromPathCandidates([]string{"/usr/local/bin/eli"})
+	amiPath, _ := GetFromPathCandidates([]string{"/usr/local/bin/ami"})
+	if eliPath == "" {
+		var err error
+		eliPath, err = exec.LookPath("eli")
+		if err != nil {
+			return "", "", errors.New("eli not found")
+		}
 	}
 
-	amiPath, err := exec.LookPath("ami")
+	if amiPath == "" {
+		var err error
+		amiPath, err = exec.LookPath("ami")
+		if err != nil {
+			return "", "", errors.New("ami not found")
+		}
+	}
+
+	return eliPath, amiPath, nil
+}
+
+func EraseCache() (int, error) {
+	eliPath, amiPath, err := GetEliAndAmiPath()
 	if err != nil {
-		return -1, errors.New("ami not found")
+		return -1, err
 	}
 
 	eliArgs := make([]string, 0)

@@ -77,7 +77,7 @@ var setupCmd = &cobra.Command{
 
 		if !util.GetCommandBoolFlagS(cmd, SkipAmiSetup) {
 			// install ami by default in case of remote instance
-			log.Info("Installing ami and eli...")
+			log.Debug("Installing ami and eli...")
 			exitCode, err := ami.Install(true)
 			util.AssertEE(err, "Failed to install ami and eli!", exitCode)
 		}
