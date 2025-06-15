@@ -44,7 +44,7 @@ fi
 
 if [ "$PLATFORM" = "x86_64" ]; then
 	PLATFORM="amd64"
-elif [ "$PLATFORM" = "aarch64" ]; then
+elif [ "$PLATFORM" = "aarch64" ] || [ "$PLATFORM" = "arm64" ]; then
 	PLATFORM="arm64"
 else
 	echo "unsupported platform: $PLATFORM" 1>&2
