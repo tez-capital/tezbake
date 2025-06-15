@@ -1,6 +1,6 @@
 #!/bin/sh
 
-TMP_NAME="./$(head -n 1 -c 32 /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32)"
+TMP_NAME="./$(head -c 32 /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)"
 PRERELEASE=false
 if [ "$1" = "--prerelease" ]; then
 	PRERELEASE=true
@@ -35,6 +35,13 @@ if tezbake version 2>/dev/null | grep "$LATEST" >/dev/null 2>&1; then
 fi
 
 PLATFORM=$(uname -m)
+UNAME=$(uname -s | tr '[:upper:]' '[:lower:]')
+OS=linux
+if [ "$UNAME" = "darwin" ]; then
+	mkdir -p /usr/local/bin
+	OS=macos
+fi
+
 if [ "$PLATFORM" = "x86_64" ]; then
 	PLATFORM="amd64"
 elif [ "$PLATFORM" = "aarch64" ]; then
@@ -52,26 +59,30 @@ rm -f "/usr/local/sbin/$BIN"
 rm -f "/usr/sbin/$BIN"
 rm -f "/sbin/$BIN"
 # check destination folder
-if [ -d "/usr/bin" ]; then
+if [ -w "/usr/local/bin" ]; then
+    DESTINATION="/usr/local/bin/$BIN"
+elif [ -w "/usr/local/sbin" ]; then
+    DESTINATION="/usr/local/sbin/$BIN"
+elif [ -w "/usr/bin" ]; then
     DESTINATION="/usr/bin/$BIN"
-elif [ -d "/bin" ]; then
-    DESTINATION="/bin/$BIN"
-elif [ -d "/usr/sbin" ]; then
+elif [ -w "/usr/sbin" ]; then
     DESTINATION="/usr/sbin/$BIN"
-elif [ -d "/sbin" ]; then
+elif [ -w "/bin" ]; then
+    DESTINATION="/bin/$BIN"
+elif [ -w "/sbin" ]; then
     DESTINATION="/sbin/$BIN"
 else
-    echo "no suitable destination folder found" 1>&2
-    exit 1
+    echo "No writable system binary directory found, installing locally."
+    DESTINATION="./$BIN"
 fi
 
 if [ "$PRERELEASE" = true ]; then
 	echo "downloading latest tezbake prerelease for $PLATFORM..."
 else
-	echo "downloading tezbake-linux-$PLATFORM $LATEST..."
+	echo "downloading tezbake-$OS-$PLATFORM $LATEST..."
 fi
 
-if "$@" "https://github.com/tez-capital/tezbake/releases/download/$LATEST/tezbake-linux-$PLATFORM" &&
+if "$@" "https://github.com/tez-capital/tezbake/releases/download/$LATEST/tezbake-$OS-$PLATFORM" &&
 	mv "$TMP_NAME" "$DESTINATION" &&
 	chmod +x "$DESTINATION"; then
 	if [ "$1" = "--prerelease" ]; then
