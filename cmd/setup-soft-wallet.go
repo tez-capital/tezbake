@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"path"
+	"time"
 
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps"
@@ -73,6 +74,9 @@ var setupSoftWalletCmd = &cobra.Command{
 			wasSignerRunning, _ = apps.Signer.IsServiceStatus(constants.SignerAppServiceId, "running")
 			exitCode, err := apps.Signer.Start()
 			util.AssertEE(err, "Failed to start signer!", exitCode)
+
+			// Sleep 1 second to allow the signer service to start up
+			time.Sleep(1 * time.Second)
 
 			isSignerRunning, _ := apps.Signer.IsServiceStatus(constants.SignerAppServiceId, "running")
 			util.AssertBE(isSignerRunning, "Signer is not running. Please start signer services.", constants.ExitSignerNotOperational)
