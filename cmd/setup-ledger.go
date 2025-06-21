@@ -55,7 +55,7 @@ var setupLedgerCmd = &cobra.Command{
 				amiArgs = append(amiArgs, "--no-udev")
 			}
 
-			if protocol == "" {
+			if protocol != "" {
 				amiArgs = append(amiArgs, fmt.Sprintf("--protocol=%s", protocol))
 			}
 
