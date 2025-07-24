@@ -44,7 +44,7 @@ var setupSoftWalletCmd = &cobra.Command{
 			if importKey != "" {
 				amiArgs = append(amiArgs, "--import-key="+importKey)
 			}
-			if generate != "" {
+			if generate != "" && importKey == "" { // generate is only used if we are not importing a key
 				amiArgs = append(amiArgs, "--generate="+generate)
 			}
 
