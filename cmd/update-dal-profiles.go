@@ -17,7 +17,7 @@ import (
 )
 
 var updateDalProfilesCmd = &cobra.Command{
-	Use:   "update-dal-profiles",
+	Use:   "update-dal-profiles (<profile>... | --auto) [--force]",
 	Short: "Updates dal profiles.",
 	Long:  "Updates dal profiles.",
 	Args:  cobra.ArbitraryArgs,
