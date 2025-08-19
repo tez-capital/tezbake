@@ -181,8 +181,7 @@ func ExecuteGetOutput(workingDir string, args ...string) (output string, exitCod
 }
 
 func ExecuteInfo(workingDir string, args ...string) ([]byte, int, error) {
-	output, exitCode, err := ExecuteGetOutput(workingDir, "--output-format=json",
-		"--log-level="+options.LogLevel,
-		"info")
+	args = append([]string{"--output-format=json", "--log-level=" + options.LogLevel, "info"}, args...)
+	output, exitCode, err := ExecuteGetOutput(workingDir, args...)
 	return []byte(output), exitCode, err
 }
