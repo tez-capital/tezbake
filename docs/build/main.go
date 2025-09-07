@@ -11,6 +11,7 @@ import (
 
 func main() {
 	docsDirectory := "./docs/cmd"
+	os.RemoveAll(docsDirectory)
 	os.MkdirAll(docsDirectory, os.ModePerm)
 
 	err := doc.GenMarkdownTreeCustom(cmd.RootCmd, docsDirectory,
