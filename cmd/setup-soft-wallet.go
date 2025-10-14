@@ -48,6 +48,8 @@ var setupSoftWalletCmd = &cobra.Command{
 				amiArgs = append(amiArgs, "--generate="+generate)
 			}
 
+			amiArgs = append(amiArgs, fmt.Sprintf("--key-alias=%s", keyAlias))
+
 			if force {
 				amiArgs = append(amiArgs, "--force")
 			}
@@ -115,7 +117,7 @@ func init() {
 
 	setupSoftWalletCmd.Flags().String("import-key", "", "Import key")
 	setupSoftWalletCmd.Flags().String("generate", "ed25519", "Generate key")
-	setupSoftWalletCmd.Flags().String("key-alias", "baker", "Alias ofkey to be imported")
+	setupSoftWalletCmd.Flags().String("key-alias", "baker", "Alias of the key to be imported")
 
 	setupSoftWalletCmd.Flags().BoolP("force", "f", false, "Force key import. (overwrites existing)")
 
