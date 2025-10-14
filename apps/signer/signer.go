@@ -16,5 +16,8 @@ func (app *Signer) GetKeyHash(alias string, args ...string) (string, int, error)
 	if err != nil {
 		return output, exitCode, fmt.Errorf("failed to get key hash from signer (%s)", err.Error())
 	}
-	return strings.Trim(output, " \n"), exitCode, nil
+	trimmedOutput := strings.TrimSpace(output)
+	lastLine := trimmedOutput[strings.LastIndex(trimmedOutput, "\n")+1:]
+	key := strings.TrimSpace(lastLine)
+	return key, exitCode, nil
 }
