@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/hjson/hjson-go/v4"
 	"github.com/tez-capital/tezbake/ami"
@@ -51,6 +52,20 @@ type BakeBuddyAppDefinition struct {
 	Control BakeBuddyApp
 }
 
+// try to a dumb conversion
+// https://github.com/tez-capital/xtz.configs/blob/main/seoulnet.json
+// to
+// https://raw.githubusercontent.com/tez-capital/xtz.configs/refs/heads/main/seoulnet.json
+func tryConvertGitHubContentURL(url string) string {
+	if !strings.HasPrefix(url, "https://github.com/") || !strings.Contains(url, "/blob/") {
+		return url
+	}
+
+	result := strings.Replace(url, "https://github.com/", "https://raw.githubusercontent.com/", 1)
+	result = strings.Replace(result, "/blob/", "/refs/heads/", 1)
+	return result
+}
+
 func GenerateConfiguration(template map[string]any, ctx *SetupContext) (map[string]any, error) {
 	appDef := template
 
@@ -71,7 +86,7 @@ func GenerateConfiguration(template map[string]any, ctx *SetupContext) (map[stri
 	case util.IsValidUrl(ctx.Configuration):
 		tmpConfigurationFile := path.Join(os.TempDir(), "bb-configuration")
 
-		err := util.DownloadFile(ctx.Configuration, tmpConfigurationFile, false)
+		err := util.DownloadFile(tryConvertGitHubContentURL(ctx.Configuration), tmpConfigurationFile, false)
 		if err != nil {
 			return appDef, fmt.Errorf("failed to download configuration file - %s", ctx.Configuration)
 		}

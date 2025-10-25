@@ -14,7 +14,7 @@ import (
 func (app *Signer) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 	appDef, err := base.GenerateConfiguration(app.GetAmiTemplate(ctx), ctx)
 	if err != nil {
-		log.Warn(err)
+		return -1, fmt.Errorf("failed to generate configuration - %s", err.Error())
 	}
 
 	oldAppDef, err := ami.ReadAppDefinition(app.GetPath(), constants.DefaultAppJsonName)

@@ -14,7 +14,7 @@ import (
 func (app *Peak) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 	appDef, err := base.GenerateConfiguration(app.GetAmiTemplate(ctx), ctx)
 	if err != nil {
-		log.Warn(err)
+		return -1, fmt.Errorf("failed to generate configuration - %s", err.Error())
 	}
 
 	_, _ = app.Execute("autodetect-configuration") // we ignore the error here, user can always run autodetect-configuration manually
