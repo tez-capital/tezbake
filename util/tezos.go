@@ -11,6 +11,41 @@ import (
 	"github.com/tez-capital/tezbake/constants"
 )
 
+func resolveSecondaryKey(pkh string) (string, error) {
+	url := fmt.Sprintf("%sv1/operations/update_secondary_key?publicKeyHash=%s&select=sender&sort.desc=level&limit=1", constants.TzktConsensusKeyCheckingEndpoint, pkh)
+	var bakers []struct {
+		Address string `json:"address"`
+	}
+	log.Infof("Checking if key %s is a secondary key...", pkh)
+	log.Debugf("Checking through %s...", url)
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			DialContext: (&net.Dialer{
+				Timeout: 30 * time.Second, // enforce dial timeout
+			}).DialContext,
+			TLSHandshakeTimeout: 30 * time.Second,
+		},
+		Timeout: 2 * time.Minute,
+	}
+	response, err := client.Get(url)
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("failed to check whether key %s is a consensus key: %s", pkh, response.Status)
+	}
+	err = json.NewDecoder(response.Body).Decode(&bakers)
+	if err != nil {
+		return "", err
+	}
+	if len(bakers) > 0 {
+		return bakers[0].Address, nil
+	}
+	return "", fmt.Errorf("key %s is not a consensus key", pkh)
+}
+
 func ResolveAttestationProfile(pkh string) (string, error) {
 	url := fmt.Sprintf("%sv1/delegates/%s", constants.TzktConsensusKeyCheckingEndpoint, pkh)
 	var delegate struct {
@@ -52,27 +87,11 @@ func ResolveAttestationProfile(pkh string) (string, error) {
 		return pkh, nil
 	}
 
-	url = fmt.Sprintf("%sv1/operations/update_consensus_key?publicKeyHash=%s&select=sender&sort.desc=level&limit=1", constants.TzktConsensusKeyCheckingEndpoint, pkh)
-	var bakers []struct {
-		Address string `json:"address"`
+	secondaryKeyOwner, err := resolveSecondaryKey(pkh)
+	if err == nil {
+		log.Infof("Key %s is a secondary key for delegate %s", pkh, secondaryKeyOwner)
+		return secondaryKeyOwner, nil
 	}
-	log.Infof("Checking if key %s is a consensus key...", pkh)
-	log.Debugf("Checking through %s...", url)
 
-	response, err = client.Get(url)
-	if err != nil {
-		return "", err
-	}
-	defer response.Body.Close()
-	if response.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("failed to check whether key %s is a consensus key: %s", pkh, response.Status)
-	}
-	err = json.NewDecoder(response.Body).Decode(&bakers)
-	if err != nil {
-		return "", err
-	}
-	if len(bakers) > 0 {
-		return bakers[0].Address, nil
-	}
 	return "", fmt.Errorf("failed to resolve attestation profile for key %s", pkh)
 }
