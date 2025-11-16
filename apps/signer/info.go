@@ -182,6 +182,12 @@ func (app *Signer) PrintInfo(optionsJson []byte) error {
 						status = "ok"
 					}
 					signerTable.AppendRow(table.Row{k, fmt.Sprintf("%v (%v) - %v", kind, pkh, status)})
+				case "tezsign":
+					status := "error"
+					if walletProperties.Authorized {
+						status = "ok"
+					}
+					signerTable.AppendRow(table.Row{k, fmt.Sprintf("%v (%v) - %v", kind, pkh, status)})
 				case "soft":
 					signerTable.AppendRow(table.Row{k, fmt.Sprintf("⚠️ %v ⚠️ (%v)", kind, pkh)})
 				case "remote":
