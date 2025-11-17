@@ -178,7 +178,7 @@ func (app *Signer) PrintInfo(optionsJson []byte) error {
 				switch kind {
 				case "ledger":
 					status := "error"
-					if walletProperties.LedgerStatus == "connected" && walletProperties.Authorized == true {
+					if walletProperties.LedgerStatus == "connected" && walletProperties.Authorized {
 						status = "ok"
 					}
 					signerTable.AppendRow(table.Row{k, fmt.Sprintf("%v (%v) - %v", kind, pkh, status)})
@@ -188,6 +188,8 @@ func (app *Signer) PrintInfo(optionsJson []byte) error {
 						status = "ok"
 					}
 					signerTable.AppendRow(table.Row{k, fmt.Sprintf("%v (%v) - %v", kind, pkh, status)})
+				case "http":
+					signerTable.AppendRow(table.Row{k, fmt.Sprintf("%v (%v) - %v", walletProperties.Endpoint, pkh, walletProperties.Status)})
 				case "soft":
 					signerTable.AppendRow(table.Row{k, fmt.Sprintf("⚠️ %v ⚠️ (%v)", kind, pkh)})
 				case "remote":

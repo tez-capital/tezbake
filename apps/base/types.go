@@ -48,6 +48,8 @@ type AmiWalletInfo struct {
 	Ledger       string `json:"ledger,omitempty"`
 	LedgerStatus string `json:"ledger_status,omitempty"`
 	Pkh          string `json:"pkh,omitempty"`
+	Status       string `json:"status,omitempty"`
+	Endpoint     string `json:"endpoint,omitempty"`
 }
 
 type BBInstanceVersions struct {
