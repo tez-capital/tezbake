@@ -1,19 +1,19 @@
-docs/cmd/tezbake_register-key.md## tezbake register-key
+docs/cmd/tezbake_octez-signer.md## tezbake octez-signer
 
-Register key for baking.
+Passes args through to signer app - octez-signer.
 
 ### Synopsis
 
-Registers key for baking.
+Passes args through to signer app - octez-signer.
 
 ```
-tezbake register-key [flags]
+tezbake octez-signer [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for register-key
+  -h, --help   help for octez-signer
 ```
 
 ### Options inherited from parent commands

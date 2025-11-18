@@ -1,30 +1,26 @@
-docs/cmd/tezbake_setup-ledger.md## tezbake setup-ledger
+docs/cmd/tezbake_setup-tezsign.md## tezbake setup-tezsign
 
-Setup ledger for baking.
+Setup tezsign for baking.
 
 ### Synopsis
 
-Setups ledger for baking.
+Setups tezsign for baking.
 
 ```
-tezbake setup-ledger [flags]
+tezbake setup-tezsign [flags]
 ```
 
 ### Options
 
 ```
-      --authorize                    Authorize ledger for baking.
-      --chain-id string              Id of chain to be used for baking.
   -f, --force                        Force key import. (overwrites existing)
-  -h, --help                         help for setup-ledger
-      --hwm string                   High watermark to be used during baking.
-      --import-key [string][=true]   Import key from ledger (optionally specify derivation path) (default )
+  -h, --help                         help for setup-tezsign
+      --import-key [string][=true]   Import key from tezsign (optionally specify derivation path) (default )
+      --init                         Initialize tezsign configuration.
       --key-alias string             Alias ofkey to be imported (default "baker")
-      --ledger-id string             Ledger id to import key from (affects import-key only)
       --no-udev string               Skip udev rules installation. (linux only)
       --node                         Import key to node (affects import-key only)
-      --platform [string][=true]     Prepare platform for ledger (optionally specify platform to override) (default )
-      --protocol string              Protocol hash to be used during setup-ledger.
+      --platform [string][=true]     Prepare platform for tezsign (optionally specify platform to override) (default )
       --signer                       Import key to signer (affects import-key only)
 ```
 

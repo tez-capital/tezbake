@@ -1,19 +1,19 @@
-docs/cmd/tezbake_register-key.md## tezbake register-key
+docs/cmd/tezbake_tezsign.md## tezbake tezsign
 
-Register key for baking.
+Passes args through to signer app - tezsign.
 
 ### Synopsis
 
-Registers key for baking.
+Passes args through to signer app - tezsign.
 
 ```
-tezbake register-key [flags]
+tezbake tezsign [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for register-key
+  -h, --help   help for tezsign
 ```
 
 ### Options inherited from parent commands
