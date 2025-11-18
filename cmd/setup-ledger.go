@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	platform  *BoolStringCombinedFlag
-	importKey *BoolStringCombinedFlag
+	ledgerPlatformFlag  *BoolStringCombinedFlag
+	ledgerImportKeyFlag *BoolStringCombinedFlag
 )
 
 var setupLedgerCmd = &cobra.Command{
@@ -36,6 +36,7 @@ var setupLedgerCmd = &cobra.Command{
 		isAnySelected := shouldOperateOnSigner || shouldOperateOnNode
 
 		if (shouldOperateOnSigner || !isAnySelected) && apps.Signer.IsInstalled() {
+			
 			log.Info("setting up ledger for signer...")
 			wasRunning, _ := apps.Signer.IsServiceStatus(constants.SignerAppServiceId, "running")
 			if wasRunning {
@@ -44,9 +45,9 @@ var setupLedgerCmd = &cobra.Command{
 			}
 
 			amiArgs := []string{"setup-ledger"}
-			if platform.HasValue() {
-				amiArgs = append(amiArgs, "--platform="+platform.String())
-			} else if platform.IsTrue() {
+			if ledgerPlatformFlag.HasValue() {
+				amiArgs = append(amiArgs, "--platform="+ledgerPlatformFlag.String())
+			} else if ledgerPlatformFlag.IsTrue() {
 				amiArgs = append(amiArgs, "--platform")
 			}
 
@@ -59,9 +60,9 @@ var setupLedgerCmd = &cobra.Command{
 				amiArgs = append(amiArgs, fmt.Sprintf("--protocol=%s", protocol))
 			}
 
-			if importKey.HasValue() {
-				amiArgs = append(amiArgs, "--import-key="+importKey.String())
-			} else if importKey.IsTrue() {
+			if ledgerImportKeyFlag.HasValue() {
+				amiArgs = append(amiArgs, "--import-key="+ledgerImportKeyFlag.String())
+			} else if ledgerImportKeyFlag.IsTrue() {
 				amiArgs = append(amiArgs, "--import-key")
 			}
 
@@ -106,7 +107,7 @@ var setupLedgerCmd = &cobra.Command{
 		}
 
 		if (shouldOperateOnNode || !isAnySelected) && apps.Node.IsInstalled() {
-			if importKey.IsTrue() { // node only imports key
+			if ledgerImportKeyFlag.IsTrue() { // node only imports key
 				var wasSignerRunning bool
 
 				log.Info("Importing key to the node...")
@@ -153,7 +154,7 @@ func init() {
 	setupLedgerCmd.Flags().Bool("node", false, "Import key to node (affects import-key only)")
 	setupLedgerCmd.Flags().Bool("signer", false, "Import key to signer (affects import-key only)")
 
-	importKey = addCombinedFlag(setupLedgerCmd, "import-key", "", "Import key from ledger (optionally specify derivation path)")
+	ledgerImportKeyFlag = addCombinedFlag(setupLedgerCmd, "import-key", "", "Import key from ledger (optionally specify derivation path)")
 	setupLedgerCmd.Flags().String("ledger-id", "", "Ledger id to import key from (affects import-key only)")
 	setupLedgerCmd.Flags().String("key-alias", "baker", "Alias ofkey to be imported")
 
@@ -163,7 +164,7 @@ func init() {
 
 	setupLedgerCmd.Flags().String("protocol", "", "Protocol hash to be used during setup-ledger.")
 
-	platform = addCombinedFlag(setupLedgerCmd, "platform", "", "Prepare platform for ledger (optionally specify platform to override)")
+	ledgerPlatformFlag = addCombinedFlag(setupLedgerCmd, "platform", "", "Prepare platform for ledger (optionally specify platform to override)")
 	setupLedgerCmd.Flags().String("no-udev", "", "Skip udev rules installation. (linux only)")
 
 	setupLedgerCmd.Flags().BoolP("force", "f", false, "Force key import. (overwrites existing)")
