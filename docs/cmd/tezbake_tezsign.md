@@ -1,19 +1,19 @@
-docs/cmd/tezbake_signer.md## tezbake signer
+docs/cmd/tezbake_tezsign.md## tezbake tezsign
 
-Passes args through to signer app.
+Passes args through to signer app - tezsign.
 
 ### Synopsis
 
-Passes args through to signer app.
+Passes args through to signer app - tezsign.
 
 ```
-tezbake signer [flags]
+tezbake tezsign [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for signer
+  -h, --help   help for tezsign
 ```
 
 ### Options inherited from parent commands

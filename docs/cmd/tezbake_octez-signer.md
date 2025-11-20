@@ -1,19 +1,19 @@
-docs/cmd/tezbake_signer.md## tezbake signer
+docs/cmd/tezbake_octez-signer.md## tezbake octez-signer
 
-Passes args through to signer app.
+Passes args through to signer app - octez-signer.
 
 ### Synopsis
 
-Passes args through to signer app.
+Passes args through to signer app - octez-signer.
 
 ```
-tezbake signer [flags]
+tezbake octez-signer [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for signer
+  -h, --help   help for octez-signer
 ```
 
 ### Options inherited from parent commands
