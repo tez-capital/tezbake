@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"path"
 	"time"
 
 	"github.com/tez-capital/tezbake/ami"
@@ -57,13 +56,6 @@ var setupSoftWalletCmd = &cobra.Command{
 			exitCode, err := apps.Signer.Execute(amiArgs...)
 			util.AssertEE(err, "Failed to import key to signer!", exitCode)
 
-			signerDef, _, err := apps.Signer.LoadAppDefinition()
-			util.AssertEE(err, "Failed to load signer definition!", constants.ExitInvalidUser)
-			signerUser, ok := signerDef["user"].(string)
-
-			util.AssertBE(ok, "Failed to get username from signer!", constants.ExitInvalidUser)
-			util.ChownR(signerUser, path.Join(apps.Signer.GetPath(), "data"))
-
 			if wasRunning {
 				apps.Signer.Start()
 			}
@@ -85,13 +77,6 @@ var setupSoftWalletCmd = &cobra.Command{
 			isSignerRunning, _ := apps.Signer.IsServiceStatus(constants.SignerAppServiceId, "running")
 			util.AssertBE(isSignerRunning, "Signer is not running. Please start signer services.", constants.ExitSignerNotOperational)
 			defer func() {
-				if isRemote := apps.Node.IsRemoteApp(); !isRemote {
-					nodeDef, _, err := apps.Node.LoadAppDefinition()
-					util.AssertEE(err, "Failed to load node definition!", constants.ExitAppConfigurationLoadFailed)
-					nodeUser, ok := nodeDef["user"].(string)
-					util.AssertBE(ok, "Failed to get username from node!", constants.ExitInvalidUser)
-					util.ChownR(nodeUser, path.Join(apps.Node.GetPath(), "data"))
-				}
 				if !wasSignerRunning {
 					apps.Signer.Stop()
 				}

@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path"
 
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps"
@@ -87,13 +86,6 @@ var setupTezsignCmd = &cobra.Command{
 
 			exitCode, err := apps.Signer.Execute(amiArgs...)
 			util.AssertEE(err, "Failed to import key to signer!", exitCode)
-
-			signerDef, _, err := apps.Signer.LoadAppDefinition()
-			util.AssertEE(err, "Failed to load signer definition!", constants.ExitInvalidUser)
-			signerUser, ok := signerDef["user"].(string)
-
-			util.AssertBE(ok, "Failed to get username from signer!", constants.ExitInvalidUser)
-			util.ChownR(signerUser, path.Join(apps.Signer.GetPath(), "data"))
 		}
 
 		if (shouldOperateOnNode || !isAnySelected) && apps.Node.IsInstalled() && tezsignImportKeyFlag.IsTrue() { // node only imports key
@@ -101,15 +93,6 @@ var setupTezsignCmd = &cobra.Command{
 
 			isSignerRunning, _ := apps.Signer.IsServiceStatus(constants.SignerAppServiceId, "running")
 			util.AssertBE(isSignerRunning, "Signer is not running. Please start signer services.", constants.ExitSignerNotOperational)
-			defer func() {
-				if isRemote := apps.Node.IsRemoteApp(); !isRemote {
-					nodeDef, _, err := apps.Node.LoadAppDefinition()
-					util.AssertEE(err, "Failed to load node definition!", constants.ExitAppConfigurationLoadFailed)
-					nodeUser, ok := nodeDef["user"].(string)
-					util.AssertBE(ok, "Failed to get username from node!", constants.ExitInvalidUser)
-					util.ChownR(nodeUser, path.Join(apps.Node.GetPath(), "data"))
-				}
-			}()
 
 			bakerAddr, exitCode, err := apps.Signer.GetKeyHash(keyAlias)
 			util.AssertEE(err, "Failed to get baker key hash!", exitCode)

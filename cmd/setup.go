@@ -224,7 +224,6 @@ var setupCmd = &cobra.Command{
 			}
 		}
 
-		util.ChownR(username, cli.BBdir)
 		log.Info("Setup successful")
 	},
 }
