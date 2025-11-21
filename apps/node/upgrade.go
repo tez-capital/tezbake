@@ -1,8 +1,6 @@
 package node
 
 import (
-	"path"
-
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps/base"
 	"github.com/tez-capital/tezbake/constants"
@@ -51,7 +49,7 @@ func (app *Node) Upgrade(ctx *base.UpgradeContext, args ...string) (int, error) 
 		// remote apps need to set permissions manually as setup is run on remote
 		user := app.GetUser()
 		if user != "" {
-			util.ChownR(user, path.Join(app.GetPath()))
+			util.ChownR(user, app.GetPath())
 		}
 	}
 

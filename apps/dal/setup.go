@@ -3,7 +3,6 @@ package dal
 import (
 	"fmt"
 	"os"
-	"path"
 	"strings"
 
 	"github.com/tez-capital/tezbake/ami"
@@ -126,7 +125,7 @@ func (app *DalNode) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 		// remote apps need to set permissions manually as setup is run on remote
 		user := app.GetUser()
 		if user != "" {
-			util.ChownR(user, path.Join(app.GetPath()))
+			util.ChownR(user, app.GetPath())
 		}
 	}
 	return 0, nil

@@ -3,7 +3,6 @@ package node
 import (
 	"fmt"
 	"os"
-	"path"
 
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps/base"
@@ -120,12 +119,13 @@ func (app *Node) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 	}
 
 	if app.IsRemoteApp() {
+		fmt.Println("------------> wtf wtf wtf <------------")
 		// we need to set permissions for remote apps
 		// while apps set their permissions automatically during setup
 		// remote apps need to set permissions manually as setup is run on remote
 		user := app.GetUser()
 		if user != "" {
-			util.ChownR(user, path.Join(app.GetPath()))
+			util.ChownR(user, app.GetPath())
 		}
 	}
 	return 0, nil

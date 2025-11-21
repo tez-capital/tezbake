@@ -27,6 +27,7 @@ var removeCmd = &cobra.Command{
 
 		shouldRemoveAll := util.GetCommandBoolFlagS(cmd, "all")
 		force := util.GetCommandBoolFlagS(cmd, "force")
+		skipConfirm := util.GetCommandBoolFlagS(cmd, "confirm")
 
 		selectedApps := GetAppsBySelectionCriteria(cmd, AppSelectionCriteria{
 			InitialSelection:  AllApps,
@@ -35,8 +36,8 @@ var removeCmd = &cobra.Command{
 
 		removingAllInstalled := len(selectedApps) == len(apps.GetInstalledApps())
 
-		proceed := force
-		if system.IsTty() && !force {
+		proceed := skipConfirm
+		if system.IsTty() && !skipConfirm {
 			appsToRemove := strings.Join(lo.Map(selectedApps, func(app base.BakeBuddyApp, _ int) string {
 				return strings.ToUpper(app.GetId())
 			}), ", ")
@@ -66,9 +67,13 @@ var removeCmd = &cobra.Command{
 			log.Info("Aborting removal.")
 			os.Exit(constants.ExitOperationCanceled)
 		}
+		removeArgs := []string{}
+		if force {
+			removeArgs = append(removeArgs, "--force")
+		}
 
 		for _, v := range selectedApps {
-			exitCode, err := v.Remove(shouldRemoveAll)
+			exitCode, err := v.Remove(shouldRemoveAll, removeArgs...)
 			util.AssertEE(err, fmt.Sprintf("Failed to remove %s!", v.GetId()), exitCode)
 		}
 
@@ -84,6 +89,7 @@ func init() {
 		removeCmd.Flags().Bool(v.GetId(), false, fmt.Sprintf("Removes %s.", v.GetId()))
 	}
 	removeCmd.Flags().BoolP("all", "a", false, "Removes all files related to BB instance.")
-	removeCmd.Flags().Bool("force", false, "Forces removal without confirmation.")
+	removeCmd.Flags().Bool("force", false, "Forces removal even when there are no package specific removal routines.")
+	removeCmd.Flags().Bool("confirm", false, "Skips confirmation prompts.")
 	RootCmd.AddCommand(removeCmd)
 }
