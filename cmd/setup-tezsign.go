@@ -29,6 +29,7 @@ var setupTezsignCmd = &cobra.Command{
 		init, _ := cmd.Flags().GetBool("init")
 		force, _ := cmd.Flags().GetBool("force")
 		keyAlias, _ := cmd.Flags().GetString("key-alias")
+		password, _ := cmd.Flags().GetBool("password")
 
 		isAnySelected := shouldOperateOnSigner || shouldOperateOnNode
 
@@ -38,8 +39,8 @@ var setupTezsignCmd = &cobra.Command{
 			return
 		}
 
-		if tezsignPlatformFlag.IsTrue() || init {
-			system.RequireElevatedUser() // platform setup and init require elevated permissions
+		if tezsignPlatformFlag.IsTrue() || init || password {
+			system.RequireElevatedUser() // platform setup, init and password require elevated permissions
 		}
 
 		if tezsignImportKeyFlag.IsTrue() { // tezsign import requires signer to be running
@@ -70,6 +71,10 @@ var setupTezsignCmd = &cobra.Command{
 			noUdev, _ := cmd.Flags().GetString("no-udev")
 			if noUdev != "" {
 				amiArgs = append(amiArgs, "--no-udev")
+			}
+
+			if password {
+				amiArgs = append(amiArgs, "--password")
 			}
 
 			if tezsignImportKeyFlag.HasValue() {
@@ -113,6 +118,7 @@ func init() {
 	setupTezsignCmd.Flags().Bool("node", false, "Import key to node (affects import-key only)")
 	setupTezsignCmd.Flags().Bool("signer", false, "Import key to signer (affects import-key only)")
 	setupTezsignCmd.Flags().Bool("init", false, "Initialize tezsign configuration.")
+	setupTezsignCmd.Flags().Bool("password", false, "Setup tezsign unlock password.")
 
 	tezsignImportKeyFlag = addCombinedFlag(setupTezsignCmd, "import-key", "", "Import key from tezsign (optionally specify derivation path)")
 	setupTezsignCmd.Flags().String("key-alias", "baker", "Alias ofkey to be imported")
