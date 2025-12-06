@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -34,7 +35,9 @@ var removeCmd = &cobra.Command{
 			FallbackSelection: AllFallback,
 		})
 
-		removingAllInstalled := len(selectedApps) == len(apps.GetInstalledApps())
+		removingAllInstalled := lo.EveryBy(apps.GetInstalledApps(), func(installedApp base.BakeBuddyApp) bool {
+			return slices.Contains(selectedApps, installedApp)
+		})
 
 		proceed := skipConfirm
 		if system.IsTty() && !skipConfirm {
