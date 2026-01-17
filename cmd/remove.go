@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -58,7 +59,11 @@ var removeCmd = &cobra.Command{
 			var err error
 			proceed, err = util.PromptConfirm(prompt, false)
 			if err != nil {
-				proceed = false
+				if errors.Is(err, util.ErrPromptCanceled) {
+					proceed = false
+				} else {
+					util.AssertEE(err, "Failed to confirm removal!", constants.ExitInternalError)
+				}
 			}
 			if proceed {
 				proceed = false
@@ -67,7 +72,11 @@ var removeCmd = &cobra.Command{
 				prompt = "This operation is irreversible. Do you want to abort?"
 				abort, err = util.PromptConfirm(prompt, false)
 				if err != nil {
-					abort = false
+					if errors.Is(err, util.ErrPromptCanceled) {
+						abort = true
+					} else {
+						util.AssertEE(err, "Failed to confirm removal abort!", constants.ExitInternalError)
+					}
 				}
 				proceed = !abort
 			}

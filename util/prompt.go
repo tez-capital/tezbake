@@ -10,7 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-var errPromptCanceled = errors.New("prompt canceled")
+var ErrPromptCanceled = errors.New("prompt canceled")
 
 func PromptConfirm(message string, defaultValue bool) (bool, error) {
 	model := newConfirmModel(message, defaultValue)
@@ -18,9 +18,12 @@ func PromptConfirm(message string, defaultValue bool) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	finalModel := result.(confirmModel)
+	finalModel, ok := result.(confirmModel)
+	if !ok {
+		return false, fmt.Errorf("unexpected confirm model type %T", result)
+	}
 	if finalModel.canceled {
-		return false, errPromptCanceled
+		return false, ErrPromptCanceled
 	}
 	return parseConfirmValue(finalModel.input.Value(), defaultValue), nil
 }
@@ -31,9 +34,12 @@ func PromptPassword(message string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	finalModel := result.(passwordModel)
+	finalModel, ok := result.(passwordModel)
+	if !ok {
+		return "", fmt.Errorf("unexpected password model type %T", result)
+	}
 	if finalModel.canceled {
-		return "", errPromptCanceled
+		return "", ErrPromptCanceled
 	}
 	return finalModel.input.Value(), nil
 }

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/user"
@@ -60,7 +61,11 @@ var setupCmd = &cobra.Command{
 				var err error
 				proceed, err = util.PromptConfirm("You are going to setup tezbake as root. This is not recommended. Do you want to proceed anyway?", false)
 				if err != nil {
-					proceed = false
+					if errors.Is(err, util.ErrPromptCanceled) {
+						proceed = false
+					} else {
+						util.AssertEE(err, "Failed to confirm root setup!", constants.ExitInternalError)
+					}
 				}
 			}
 			if !proceed {
@@ -131,7 +136,11 @@ var setupCmd = &cobra.Command{
 					var err error
 					proceed, err = util.PromptConfirm(fmt.Sprintf("Existing setup of '%s' found. Do you want to merge?", v.GetId()), false)
 					if err != nil {
-						proceed = false
+						if errors.Is(err, util.ErrPromptCanceled) {
+							proceed = false
+						} else {
+							util.AssertEE(err, "Failed to confirm setup merge option!", constants.ExitInternalError)
+						}
 					}
 				}
 				if !proceed {
@@ -154,7 +163,11 @@ var setupCmd = &cobra.Command{
 					var err error
 					proceed, err = util.PromptConfirm("DAL_NODE is set in node definition but no dal node found. Do you want to remove it?", false)
 					if err != nil {
-						proceed = false
+						if errors.Is(err, util.ErrPromptCanceled) {
+							proceed = false
+						} else {
+							util.AssertEE(err, "Failed to confirm DAL_NODE removal!", constants.ExitInternalError)
+						}
 					}
 				}
 				if proceed {
@@ -198,7 +211,11 @@ var setupCmd = &cobra.Command{
 					var err error
 					proceed, err = util.PromptConfirm(fmt.Sprintf("DAL - node endpoint '%s' is different from actual node endpoint '%s'. Do you want to update the DAL - node endpoint to match the actual node endpoint?", dalNodeEndpoint, nodeEndpoint), false)
 					if err != nil {
-						proceed = false
+						if errors.Is(err, util.ErrPromptCanceled) {
+							proceed = false
+						} else {
+							util.AssertEE(err, "Failed to confirm DAL node endpoint update!", constants.ExitInternalError)
+						}
 					}
 				}
 				if proceed {
@@ -215,7 +232,11 @@ var setupCmd = &cobra.Command{
 					var err error
 					proceed, err = util.PromptConfirm(fmt.Sprintf("NODE - dal endpoint '%s' is different from actual dal endpoint '%s'. Do you want to update the NODE - dal endpoint to match the actual dal endpoint?", nodeDalEndpoint, dalEndpoint), false)
 					if err != nil {
-						proceed = false
+						if errors.Is(err, util.ErrPromptCanceled) {
+							proceed = false
+						} else {
+							util.AssertEE(err, "Failed to confirm node dal endpoint update!", constants.ExitInternalError)
+						}
 					}
 				}
 				if proceed {

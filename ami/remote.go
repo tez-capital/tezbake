@@ -153,6 +153,9 @@ func (config *RemoteConfiguration) GetElevationCredentials() (*RemoteElevateCred
 		if decData == nil {
 			password, err = util.PromptPassword(fmt.Sprintf("Enter password to unlock credentials for elevation (%s):", config.App))
 			if err != nil {
+				if errors.Is(err, util.ErrPromptCanceled) {
+					os.Exit(constants.ExitOperationCanceled)
+				}
 				return nil, err
 			}
 			decData, err = tryDecrypt(password, encFileData)
@@ -307,7 +310,12 @@ func WriteRemoteElevationCredentials(appDir string, config *RemoteConfiguration,
 	util.AssertEE(err, "Failed to serialize remote elevation credentials!", constants.ExitSerializationFailed)
 
 	password, err := util.PromptPassword("Enter password to encrypt credentials for elevation:")
-	util.AssertE(err, "failed to get password")
+	if err != nil {
+		if errors.Is(err, util.ErrPromptCanceled) {
+			os.Exit(constants.ExitOperationCanceled)
+		}
+		util.AssertEE(err, "failed to get password", constants.ExitInternalError)
+	}
 
 	elevationCredentialsFileName := ElevationCredentialsEncFile
 	if password == "" {

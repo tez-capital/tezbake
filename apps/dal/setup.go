@@ -1,6 +1,7 @@
 package dal
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -17,7 +18,10 @@ import (
 func promptReuseElevateCredentials() bool {
 	response, err := util.PromptConfirm("Do you want to reuse existing elevate credentials?", false)
 	if err != nil {
-		return false
+		if errors.Is(err, util.ErrPromptCanceled) {
+			return false
+		}
+		util.AssertEE(err, "Failed to confirm reuse of elevate credentials!", constants.ExitInternalError)
 	}
 	return response
 }
@@ -43,7 +47,12 @@ func (app *DalNode) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 				fallthrough
 			case ami.REMOTE_ELEVATION_SUDO:
 				remoteElevatePassword, err := util.PromptPassword("Enter password to use for elevation on dal remote:")
-				util.AssertE(err, "Remote elevate requires password!")
+				if err != nil {
+					if errors.Is(err, util.ErrPromptCanceled) {
+						os.Exit(constants.ExitOperationCanceled)
+					}
+					util.AssertEE(err, "Remote elevate requires password!", constants.ExitInternalError)
+				}
 				ctx.RemoteElevatePassword = remoteElevatePassword
 
 				credentials := ctx.ToRemoteElevateCredentials()
