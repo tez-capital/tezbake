@@ -5,7 +5,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/samber/lo"
 	"github.com/tez-capital/tezbake/apps"
 	"github.com/tez-capital/tezbake/constants"
@@ -33,11 +32,10 @@ var updateDalProfilesCmd = &cobra.Command{
 		args = util.RemoveCmdFlags(cmd, args)
 
 		if len(args) == 0 && !autodetect {
-			proceed := false
-			survey.AskOne(&survey.Confirm{
-				Message: "No keys provided. Do you want to autodetect?",
-				Default: true,
-			}, &proceed, nil)
+			proceed, err := util.PromptConfirm("No keys provided. Do you want to autodetect?", true)
+			if err != nil {
+				proceed = false
+			}
 			if !proceed {
 				fmt.Println("No keys provided. Exiting.")
 				os.Exit(constants.ExitOperationCanceled)

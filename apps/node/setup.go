@@ -10,16 +10,11 @@ import (
 	"github.com/tez-capital/tezbake/constants"
 	"github.com/tez-capital/tezbake/util"
 
-	"github.com/AlecAivazis/survey/v2"
 	log "github.com/sirupsen/logrus"
 )
 
 func promptReuseElevateCredentials() bool {
-	var response bool
-	prompt := &survey.Confirm{
-		Message: "Do you want to reuse existing elevate credentials?",
-	}
-	err := survey.AskOne(prompt, &response)
+	response, err := util.PromptConfirm("Do you want to reuse existing elevate credentials?", false)
 	if err != nil {
 		return false
 	}
@@ -46,11 +41,7 @@ func (app *Node) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 			case ami.REMOTE_ELEVATION_SU:
 				fallthrough
 			case ami.REMOTE_ELEVATION_SUDO:
-				remoteElevatePassword := ""
-				prompt := &survey.Password{
-					Message: "Enter password to use for elevation on node remote:",
-				}
-				err = survey.AskOne(prompt, &remoteElevatePassword)
+				remoteElevatePassword, err := util.PromptPassword("Enter password to use for elevation on node remote:")
 				util.AssertE(err, "Remote elevate requires password!")
 				ctx.RemoteElevatePassword = remoteElevatePassword
 

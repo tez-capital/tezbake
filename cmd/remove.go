@@ -6,7 +6,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/samber/lo"
 	"github.com/tez-capital/tezbake/apps"
 	"github.com/tez-capital/tezbake/apps/base"
@@ -56,13 +55,20 @@ var removeCmd = &cobra.Command{
 			default:
 				prompt = fmt.Sprintf("Are you sure you want to remove %s data?", appsToRemove)
 			}
-			survey.AskOne(&survey.Confirm{Message: prompt}, &proceed)
+			var err error
+			proceed, err = util.PromptConfirm(prompt, false)
+			if err != nil {
+				proceed = false
+			}
 			if proceed {
 				proceed = false
 				abort := false
 				fmt.Println("")
 				prompt = "This operation is irreversible. Do you want to abort?"
-				survey.AskOne(&survey.Confirm{Message: prompt}, &abort)
+				abort, err = util.PromptConfirm(prompt, false)
+				if err != nil {
+					abort = false
+				}
 				proceed = !abort
 			}
 		}
@@ -83,7 +89,7 @@ var removeCmd = &cobra.Command{
 		if removingAllInstalled && shouldRemoveAll {
 			os.RemoveAll(cli.BBdir)
 		}
-		log.Info("BB removal succesfull")
+		log.Info("BB removal successful")
 	},
 }
 

@@ -20,7 +20,6 @@ import (
 	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/pkg/sftp"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
@@ -136,9 +135,6 @@ func (config *RemoteConfiguration) GetElevationCredentials() (*RemoteElevateCred
 
 	if _, err := os.Stat(encPath); !os.IsNotExist(err) {
 		var password string
-		prompt := &survey.Password{
-			Message: fmt.Sprintf("Enter password to unlock credentials for elevation (%s):", config.App),
-		}
 
 		encFileData, err := os.ReadFile(encPath)
 		if err != nil {
@@ -155,7 +151,7 @@ func (config *RemoteConfiguration) GetElevationCredentials() (*RemoteElevateCred
 		}
 
 		if decData == nil {
-			err = survey.AskOne(prompt, &password)
+			password, err = util.PromptPassword(fmt.Sprintf("Enter password to unlock credentials for elevation (%s):", config.App))
 			if err != nil {
 				return nil, err
 			}
@@ -310,11 +306,7 @@ func WriteRemoteElevationCredentials(appDir string, config *RemoteConfiguration,
 	serializedCredentials, err := json.MarshalIndent(credentials, "", "\t")
 	util.AssertEE(err, "Failed to serialize remote elevation credentials!", constants.ExitSerializationFailed)
 
-	password := ""
-	prompt := &survey.Password{
-		Message: "Enter password to encrypt credentials for elevation:",
-	}
-	err = survey.AskOne(prompt, &password)
+	password, err := util.PromptPassword("Enter password to encrypt credentials for elevation:")
 	util.AssertE(err, "failed to get password")
 
 	elevationCredentialsFileName := ElevationCredentialsEncFile
