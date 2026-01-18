@@ -98,10 +98,10 @@ func parseConfirmValue(raw string, defaultValue bool) bool {
 	if value == "" {
 		return defaultValue
 	}
-	if value == "1" || value == "true" || strings.HasPrefix(value, "y") {
+	switch value {
+	case "y", "yes":
 		return true
-	}
-	if value == "0" || value == "false" || strings.HasPrefix(value, "n") {
+	case "n", "no":
 		return false
 	}
 	return defaultValue
