@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -33,14 +32,7 @@ var updateDalProfilesCmd = &cobra.Command{
 		args = util.RemoveCmdFlags(cmd, args)
 
 		if len(args) == 0 && !autodetect {
-			proceed, err := util.PromptConfirm("No keys provided. Do you want to autodetect?", true)
-			if err != nil {
-				if errors.Is(err, util.ErrPromptCanceled) {
-					proceed = false
-				} else {
-					util.AssertEE(err, "Failed to confirm autodetect option!", constants.ExitInternalError)
-				}
-			}
+			proceed := util.Confirm("No keys provided. Do you want to autodetect?", true, "Failed to confirm autodetect option!")
 			if !proceed {
 				fmt.Println("No keys provided. Exiting.")
 				os.Exit(constants.ExitOperationCanceled)

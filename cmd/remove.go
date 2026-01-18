@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -56,28 +55,13 @@ var removeCmd = &cobra.Command{
 			default:
 				prompt = fmt.Sprintf("Are you sure you want to remove %s data?", appsToRemove)
 			}
-			var err error
-			proceed, err = util.PromptConfirm(prompt, false)
-			if err != nil {
-				if errors.Is(err, util.ErrPromptCanceled) {
-					proceed = false
-				} else {
-					util.AssertEE(err, "Failed to confirm removal!", constants.ExitInternalError)
-				}
-			}
+			proceed = util.Confirm(prompt, false, "Failed to confirm removal!")
 			if proceed {
 				proceed = false
 				abort := false
 				fmt.Println("")
 				prompt = "This operation is irreversible. Do you want to abort?"
-				abort, err = util.PromptConfirm(prompt, false)
-				if err != nil {
-					if errors.Is(err, util.ErrPromptCanceled) {
-						abort = true
-					} else {
-						util.AssertEE(err, "Failed to confirm removal abort!", constants.ExitInternalError)
-					}
-				}
+				abort = util.ConfirmWithCancelValue(prompt, false, true, "Failed to confirm removal abort!")
 				proceed = !abort
 			}
 		}

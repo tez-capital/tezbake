@@ -6,11 +6,34 @@ import (
 	"os"
 	"strings"
 
+	"github.com/tez-capital/tezbake/constants"
+
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 var ErrPromptCanceled = errors.New("prompt canceled")
+
+func Confirm(message string, defaultValue bool, failureMsg ...string) bool {
+	return ConfirmWithCancelValue(message, defaultValue, false, failureMsg...)
+}
+
+func ConfirmWithCancelValue(message string, defaultValue bool, cancelValue bool, failureMsg ...string) bool {
+	response, err := PromptConfirm(message, defaultValue)
+	if err != nil {
+		if errors.Is(err, ErrPromptCanceled) {
+			return cancelValue
+		}
+		AssertEE(err, confirmFailureMessage(message, failureMsg), constants.ExitInternalError)
+	}
+	return response
+}
+
+func ConfirmOrExit(message string, defaultValue bool, failureMsg ...string) {
+	if !Confirm(message, defaultValue, failureMsg...) {
+		os.Exit(constants.ExitOperationCanceled)
+	}
+}
 
 func PromptConfirm(message string, defaultValue bool) (bool, error) {
 	model := newConfirmModel(message, defaultValue)
@@ -42,6 +65,13 @@ func PromptPassword(message string) (string, error) {
 		return "", ErrPromptCanceled
 	}
 	return finalModel.input.Value(), nil
+}
+
+func confirmFailureMessage(message string, failureMsg []string) string {
+	if len(failureMsg) > 0 && failureMsg[0] != "" {
+		return failureMsg[0]
+	}
+	return "Failed to confirm: " + message
 }
 
 type confirmModel struct {

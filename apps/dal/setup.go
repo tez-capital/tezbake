@@ -16,14 +16,7 @@ import (
 )
 
 func promptReuseElevateCredentials() bool {
-	response, err := util.PromptConfirm("Do you want to reuse existing elevate credentials?", false)
-	if err != nil {
-		if errors.Is(err, util.ErrPromptCanceled) {
-			return false
-		}
-		util.AssertEE(err, "Failed to confirm reuse of elevate credentials!", constants.ExitInternalError)
-	}
-	return response
+	return util.Confirm("Do you want to reuse existing elevate credentials?", false, "Failed to confirm reuse of elevate credentials!")
 }
 
 func (app *DalNode) Setup(ctx *base.SetupContext, args ...string) (int, error) {
