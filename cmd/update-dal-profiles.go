@@ -32,8 +32,8 @@ var updateDalProfilesCmd = &cobra.Command{
 		args = util.RemoveCmdFlags(cmd, args)
 
 		if len(args) == 0 && !autodetect {
-			proceed := util.Confirm("No keys provided. Do you want to autodetect?", true, "Failed to confirm autodetect option!")
-			if !proceed {
+			isUserConfirmed := util.Confirm("No keys provided. Do you want to autodetect?", true, "Failed to confirm autodetect option!")
+			if !isUserConfirmed {
 				fmt.Println("No keys provided. Exiting.")
 				os.Exit(constants.ExitOperationCanceled)
 			}

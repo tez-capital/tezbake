@@ -19,7 +19,7 @@ func Confirm(message string, defaultValue bool, failureMsg ...string) bool {
 }
 
 func ConfirmWithCancelValue(message string, defaultValue bool, cancelValue bool, failureMsg ...string) bool {
-	response, err := PromptConfirm(message, defaultValue)
+	response, err := promptConfirm(message, defaultValue)
 	if err != nil {
 		if errors.Is(err, ErrPromptCanceled) {
 			return cancelValue
@@ -35,7 +35,29 @@ func ConfirmOrExit(message string, defaultValue bool, failureMsg ...string) {
 	}
 }
 
-func PromptConfirm(message string, defaultValue bool) (bool, error) {
+func RequirePasswordE(message string, errMsg string, errExitCode int) string {
+	password, err := promptPassword(message)
+	if err != nil {
+		if errors.Is(err, ErrPromptCanceled) {
+			os.Exit(constants.ExitOperationCanceled)
+		}
+		AssertEE(err, errMsg, errExitCode)
+	}
+	return password
+}
+
+func PromptPasswordE(message string) (string, error) {
+	password, err := promptPassword(message)
+	if err != nil {
+		if errors.Is(err, ErrPromptCanceled) {
+			os.Exit(constants.ExitOperationCanceled)
+		}
+		return "", err
+	}
+	return password, nil
+}
+
+func promptConfirm(message string, defaultValue bool) (bool, error) {
 	model := newConfirmModel(message, defaultValue)
 	result, err := tea.NewProgram(model, tea.WithInput(os.Stdin), tea.WithOutput(os.Stdout)).Run()
 	if err != nil {
@@ -51,7 +73,7 @@ func PromptConfirm(message string, defaultValue bool) (bool, error) {
 	return parseConfirmValue(finalModel.input.Value(), defaultValue), nil
 }
 
-func PromptPassword(message string) (string, error) {
+func promptPassword(message string) (string, error) {
 	model := newPasswordModel(message)
 	result, err := tea.NewProgram(model, tea.WithInput(os.Stdin), tea.WithOutput(os.Stdout)).Run()
 	if err != nil {

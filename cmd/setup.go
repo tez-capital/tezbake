@@ -115,16 +115,16 @@ var setupCmd = &cobra.Command{
 			}
 
 			if v.IsInstalled() && !force {
-				proceed := false
+				isUserConfirmed := false
 				if system.IsTty() {
 					if ctx.Remote != "" && !v.IsRemoteApp() {
 						log.Errorf("You have already installed %s locally. Please remove it first!", v.GetId())
 						os.Exit(constants.ExitNotSupported)
 					}
 
-					proceed = util.Confirm(fmt.Sprintf("Existing setup of '%s' found. Do you want to merge?", v.GetId()), false, "Failed to confirm setup merge option!")
+					isUserConfirmed = util.Confirm(fmt.Sprintf("Existing setup of '%s' found. Do you want to merge?", v.GetId()), false, "Failed to confirm setup merge option!")
 				}
-				if !proceed {
+				if !isUserConfirmed {
 					os.Exit(constants.ExitOperationCanceled)
 				}
 			}
@@ -139,11 +139,11 @@ var setupCmd = &cobra.Command{
 
 			_, found := nodeModel["DAL_NODE"].(string)
 			if found {
-				proceed := false
+				isUserConfirmed := false
 				if system.IsTty() {
-					proceed = util.Confirm("DAL_NODE is set in node definition but no dal node found. Do you want to remove it?", false, "Failed to confirm DAL_NODE removal!")
+					isUserConfirmed = util.Confirm("DAL_NODE is set in node definition but no dal node found. Do you want to remove it?", false, "Failed to confirm DAL_NODE removal!")
 				}
-				if proceed {
+				if isUserConfirmed {
 					log.Infof("Removing dal node endpoint from node definition")
 					apps.Node.UpdateDalEndpoint("")
 				}
@@ -179,11 +179,11 @@ var setupCmd = &cobra.Command{
 			// check if dalNodeEndpoint equals nodeEndpoint with scheme
 
 			if dalNodeEndpoint != nodeEndpoint {
-				proceed := dalNodeEndpoint == "" // TODO: || force update
-				if !proceed && system.IsTty() {
-					proceed = util.Confirm(fmt.Sprintf("DAL - node endpoint '%s' is different from actual node endpoint '%s'. Do you want to update the DAL - node endpoint to match the actual node endpoint?", dalNodeEndpoint, nodeEndpoint), false, "Failed to confirm DAL node endpoint update!")
+				isUserConfirmed := dalNodeEndpoint == "" // TODO: || force update
+				if !isUserConfirmed && system.IsTty() {
+					isUserConfirmed = util.Confirm(fmt.Sprintf("DAL - node endpoint '%s' is different from actual node endpoint '%s'. Do you want to update the DAL - node endpoint to match the actual node endpoint?", dalNodeEndpoint, nodeEndpoint), false, "Failed to confirm DAL node endpoint update!")
 				}
-				if proceed {
+				if isUserConfirmed {
 					log.Infof("Updating dal node endpoint to '%s'", nodeEndpoint)
 					util.AssertEE(apps.DalNode.UpdateNodeEndpoint(nodeEndpoint), "Failed to update dal node endpoint!", constants.ExitInternalError)
 					exitCode, err := apps.DalNode.Execute("setup", "--configure") // reconfigure to apply changes
@@ -192,11 +192,11 @@ var setupCmd = &cobra.Command{
 				}
 			}
 			if nodeDalEndpoint != dalEndpoint {
-				proceed := nodeDalEndpoint == "" // TODO: || force update
-				if !proceed && system.IsTty() {
-					proceed = util.Confirm(fmt.Sprintf("NODE - dal endpoint '%s' is different from actual dal endpoint '%s'. Do you want to update the NODE - dal endpoint to match the actual dal endpoint?", nodeDalEndpoint, dalEndpoint), false, "Failed to confirm node dal endpoint update!")
+				isUserConfirmed := nodeDalEndpoint == "" // TODO: || force update
+				if !isUserConfirmed && system.IsTty() {
+					isUserConfirmed = util.Confirm(fmt.Sprintf("NODE - dal endpoint '%s' is different from actual dal endpoint '%s'. Do you want to update the NODE - dal endpoint to match the actual dal endpoint?", nodeDalEndpoint, dalEndpoint), false, "Failed to confirm node dal endpoint update!")
 				}
-				if proceed {
+				if isUserConfirmed {
 					log.Infof("Updating node dal endpoint to '%s'", dalEndpoint)
 					util.AssertEE(apps.Node.UpdateDalEndpoint(dalEndpoint), "Failed to update dal node endpoint!", constants.ExitInternalError)
 					exitCode, err := apps.Node.Execute("setup", "--configure") // reconfigure to apply changes

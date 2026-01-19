@@ -36,13 +36,7 @@ type SshCommandResult struct {
 }
 
 func promptForPassword(reason string, failureMsg string) []byte {
-	pw, err := util.PromptPassword(reason)
-	if err != nil {
-		if errors.Is(err, util.ErrPromptCanceled) {
-			os.Exit(constants.ExitOperationCanceled)
-		}
-		util.AssertEE(err, failureMsg, constants.ExitInternalError)
-	}
+	pw := util.RequirePasswordE(reason, failureMsg, constants.ExitInternalError)
 	// bytepw, err := term.ReadPassword(int(syscall.Stdin))
 	return []byte(pw)
 }

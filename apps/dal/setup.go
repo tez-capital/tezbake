@@ -1,7 +1,6 @@
 package dal
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -39,13 +38,7 @@ func (app *DalNode) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 			case ami.REMOTE_ELEVATION_SU:
 				fallthrough
 			case ami.REMOTE_ELEVATION_SUDO:
-				remoteElevatePassword, err := util.PromptPassword("Enter password to use for elevation on dal remote:")
-				if err != nil {
-					if errors.Is(err, util.ErrPromptCanceled) {
-						os.Exit(constants.ExitOperationCanceled)
-					}
-					util.AssertEE(err, "Remote elevate requires password!", constants.ExitInternalError)
-				}
+				remoteElevatePassword := util.RequirePasswordE("Enter password to use for elevation on dal remote:", "Remote elevate requires password!", constants.ExitInternalError)
 				ctx.RemoteElevatePassword = remoteElevatePassword
 
 				credentials := ctx.ToRemoteElevateCredentials()
