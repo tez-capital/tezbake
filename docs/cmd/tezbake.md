@@ -24,6 +24,7 @@ Copyright © 2026 tez.capital
 * [tezbake bootstrap-node](/tezbake/reference/cmd/tezbake_bootstrap-node)	 - Bootstraps Bake Buddy's Tezos node.
 * [tezbake dal](/tezbake/reference/cmd/tezbake_dal)	 - Passes args through to dal node app.
 * [tezbake info](/tezbake/reference/cmd/tezbake_info)	 - Prints runtime information about BB.
+* [tezbake instance](/tezbake/reference/cmd/tezbake_instance)	 - Executes command on a specific tezbake instance
 * [tezbake list-ledgers](/tezbake/reference/cmd/tezbake_list-ledgers)	 - Prints list of available ledgers.
 * [tezbake node](/tezbake/reference/cmd/tezbake_node)	 - Passes args through to node app.
 * [tezbake octez-signer](/tezbake/reference/cmd/tezbake_octez-signer)	 - Passes args through to signer app - octez-signer.
