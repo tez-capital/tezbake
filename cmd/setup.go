@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/user"
+	"path/filepath"
 	"strings"
 
 	"github.com/samber/lo"
@@ -72,7 +73,15 @@ var setupCmd = &cobra.Command{
 		force := util.GetCommandBoolFlagS(cmd, Force)
 		disablePostProcess := util.GetCommandBoolFlagS(cmd, DisablePostProcess)
 		util.AssertBE(id != "", "Id not specified", constants.ExitInvalidId)
-		util.AssertBE(id != "bb-default" || cli.BBdir == constants.DefaultBBDirectory, "Please specify id for baker. 'default' id is allowed only for bake buddy installed in '"+constants.DefaultBBDirectory+"' path!", constants.ExitInvalidId)
+		if id == "bb-default" && cli.BBdir != constants.DefaultBBDirectory {
+			// extract last segment and use it as id if it does not contain whitespace
+			id = filepath.Base(cli.BBdir)
+			if strings.Contains(id, " ") {
+				log.Errorf("Please specify id for baker. 'bb-default' id is allowed only for bake buddy installed in '%s' path! The inferred id '%s' contains whitespace.", constants.DefaultBBDirectory, id)
+				os.Exit(constants.ExitInvalidId)
+			}
+		}
+
 		cli.BBInstanceId = id
 
 		if !util.GetCommandBoolFlagS(cmd, SkipAmiSetup) {

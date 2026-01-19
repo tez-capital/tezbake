@@ -113,6 +113,7 @@ Copyright © %d tez.capital
 				log.Trace("Output format set to 'text'")
 			default:
 				if fileInfo, _ := os.Stdout.Stat(); (fileInfo.Mode() & os.ModeCharDevice) == 0 {
+					cli.JsonLogFormat = true
 					log.SetFormatter(&bbJsonFormatter{})
 					log.Trace("Output format automatically set to 'json'")
 				} else {
