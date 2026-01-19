@@ -18,12 +18,12 @@ tezbake setup-ledger [flags]
   -f, --force                        Force key import. (overwrites existing)
   -h, --help                         help for setup-ledger
       --hwm string                   High watermark to be used during baking.
-      --import-key [string][=true]   Import key from ledger (optionally specify derivation path) (default )
+      --import-key [string][=true]   Import key from ledger (optionally specify derivation path)
       --key-alias string             Alias ofkey to be imported (default "baker")
       --ledger-id string             Ledger id to import key from (affects import-key only)
       --no-udev string               Skip udev rules installation. (linux only)
       --node                         Import key to node (affects import-key only)
-      --platform [string][=true]     Prepare platform for ledger (optionally specify platform to override) (default )
+      --platform [string][=true]     Prepare platform for ledger (optionally specify platform to override)
       --protocol string              Protocol hash to be used during setup-ledger.
       --signer                       Import key to signer (affects import-key only)
 ```

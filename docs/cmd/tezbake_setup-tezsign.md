@@ -15,13 +15,13 @@ tezbake setup-tezsign [flags]
 ```
   -f, --force                        Force key import. (overwrites existing)
   -h, --help                         help for setup-tezsign
-      --import-key [string][=true]   Import key from tezsign (optionally specify derivation path) (default )
+      --import-key [string][=true]   Import key from tezsign (optionally specify derivation path)
       --init                         Initialize tezsign configuration.
       --key-alias string             Alias ofkey to be imported (default "baker")
       --no-udev string               Skip udev rules installation. (linux only)
       --node                         Import key to node (affects import-key only)
       --password                     Setup tezsign unlock password.
-      --platform [string][=true]     Prepare platform for tezsign (optionally specify platform to override) (default )
+      --platform [string][=true]     Prepare platform for tezsign (optionally specify platform to override)
       --signer                       Import key to signer (affects import-key only)
 ```
 
