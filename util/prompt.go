@@ -46,7 +46,7 @@ func RequirePasswordE(message string, errMsg string, errExitCode int) string {
 	return password
 }
 
-func PromptPasswordE(message string) (string, error) {
+func PromptPassword(message string) (string, error) {
 	password, err := promptPassword(message)
 	if err != nil {
 		if errors.Is(err, ErrPromptCanceled) {

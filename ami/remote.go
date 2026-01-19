@@ -151,7 +151,7 @@ func (config *RemoteConfiguration) GetElevationCredentials() (*RemoteElevateCred
 		}
 
 		if decData == nil {
-			password, err = util.PromptPasswordE(fmt.Sprintf("Enter password to unlock credentials for elevation (%s):", config.App))
+			password, err = util.PromptPassword(fmt.Sprintf("Enter password to unlock credentials for elevation (%s):", config.App))
 			if err != nil {
 				return nil, err
 			}
