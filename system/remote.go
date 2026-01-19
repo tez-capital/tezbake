@@ -13,7 +13,6 @@ import (
 	"github.com/tez-capital/tezbake/constants"
 	"github.com/tez-capital/tezbake/util"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
@@ -37,13 +36,8 @@ type SshCommandResult struct {
 }
 
 func promptForPassword(reason string, failureMsg string) []byte {
-	pw := ""
-	prompt := &survey.Password{
-		Message: reason,
-	}
-	err := survey.AskOne(prompt, &pw)
+	pw := util.RequirePasswordE(reason, failureMsg, constants.ExitInternalError)
 	// bytepw, err := term.ReadPassword(int(syscall.Stdin))
-	util.AssertE(err, failureMsg)
 	return []byte(pw)
 }
 

@@ -6,7 +6,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/samber/lo"
 	"github.com/tez-capital/tezbake/apps"
 	"github.com/tez-capital/tezbake/apps/base"
@@ -39,7 +38,7 @@ var removeCmd = &cobra.Command{
 			return slices.Contains(selectedApps, installedApp)
 		})
 
-		proceed := skipConfirm
+		isUserConfirmed := skipConfirm
 		if system.IsTty() && !skipConfirm {
 			appsToRemove := strings.Join(lo.Map(selectedApps, func(app base.BakeBuddyApp, _ int) string {
 				return strings.ToUpper(app.GetId())
@@ -56,17 +55,17 @@ var removeCmd = &cobra.Command{
 			default:
 				prompt = fmt.Sprintf("Are you sure you want to remove %s data?", appsToRemove)
 			}
-			survey.AskOne(&survey.Confirm{Message: prompt}, &proceed)
-			if proceed {
-				proceed = false
+			isUserConfirmed = util.Confirm(prompt, false, "Failed to confirm removal!")
+			if isUserConfirmed {
+				isUserConfirmed = false
 				abort := false
 				fmt.Println("")
 				prompt = "This operation is irreversible. Do you want to abort?"
-				survey.AskOne(&survey.Confirm{Message: prompt}, &abort)
-				proceed = !abort
+				abort = util.ConfirmWithCancelValue(prompt, false, true, "Failed to confirm removal abort!")
+				isUserConfirmed = !abort
 			}
 		}
-		if !proceed {
+		if !isUserConfirmed {
 			log.Info("Aborting removal.")
 			os.Exit(constants.ExitOperationCanceled)
 		}
@@ -83,7 +82,7 @@ var removeCmd = &cobra.Command{
 		if removingAllInstalled && shouldRemoveAll {
 			os.RemoveAll(cli.BBdir)
 		}
-		log.Info("BB removal succesfull")
+		log.Info("BB removal successful")
 	},
 }
 

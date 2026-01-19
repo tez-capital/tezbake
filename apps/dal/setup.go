@@ -11,20 +11,11 @@ import (
 	"github.com/tez-capital/tezbake/constants"
 	"github.com/tez-capital/tezbake/util"
 
-	"github.com/AlecAivazis/survey/v2"
 	log "github.com/sirupsen/logrus"
 )
 
 func promptReuseElevateCredentials() bool {
-	var response bool
-	prompt := &survey.Confirm{
-		Message: "Do you want to reuse existing elevate credentials?",
-	}
-	err := survey.AskOne(prompt, &response)
-	if err != nil {
-		return false
-	}
-	return response
+	return util.Confirm("Do you want to reuse existing elevate credentials?", false, "Failed to confirm reuse of elevate credentials!")
 }
 
 func (app *DalNode) Setup(ctx *base.SetupContext, args ...string) (int, error) {
@@ -47,12 +38,7 @@ func (app *DalNode) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 			case ami.REMOTE_ELEVATION_SU:
 				fallthrough
 			case ami.REMOTE_ELEVATION_SUDO:
-				remoteElevatePassword := ""
-				prompt := &survey.Password{
-					Message: "Enter password to use for elevation on dal remote:",
-				}
-				err = survey.AskOne(prompt, &remoteElevatePassword)
-				util.AssertE(err, "Remote elevate requires password!")
+				remoteElevatePassword := util.RequirePasswordE("Enter password to use for elevation on dal remote:", "Remote elevate requires password!", constants.ExitInternalError)
 				ctx.RemoteElevatePassword = remoteElevatePassword
 
 				credentials := ctx.ToRemoteElevateCredentials()
