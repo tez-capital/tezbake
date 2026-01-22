@@ -74,9 +74,16 @@ var removeCmd = &cobra.Command{
 			removeArgs = append(removeArgs, "--force")
 		}
 
-		for _, v := range selectedApps {
-			exitCode, err := v.Remove(shouldRemoveAll, removeArgs...)
-			util.AssertEE(err, fmt.Sprintf("Failed to remove %s!", v.GetId()), exitCode)
+		for _, app := range selectedApps {
+			serviceInfo, err := app.GetServiceInfo()
+			if err == nil && !force {
+				for serviceName, service := range serviceInfo {
+					util.AssertBE(service.Status != "running", fmt.Sprintf("%s service %s is running. Please stop the application first or use --force to override", app.GetId(), serviceName), constants.ExitUserInvalidInput)
+				}
+			}
+
+			exitCode, err := app.Remove(shouldRemoveAll, removeArgs...)
+			util.AssertEE(err, fmt.Sprintf("Failed to remove %s!", app.GetId()), exitCode)
 		}
 
 		if removingAllInstalled && shouldRemoveAll {
