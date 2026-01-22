@@ -155,7 +155,7 @@ func (m confirmModel) View() string {
 	if m.defaultValue {
 		hint = "Y/n"
 	}
-	return fmt.Sprintf("%s [%s] %s\n", m.prompt, hint, m.input.View())
+	return fmt.Sprintf("%s %s %s\n", constants.StylePrompt.Render(m.prompt), constants.StyleHint.Render("["+hint+"]"), m.input.View())
 }
 
 type passwordModel struct {
@@ -198,5 +198,5 @@ func (m passwordModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m passwordModel) View() string {
-	return fmt.Sprintf("%s %s\n", m.prompt, m.input.View())
+	return fmt.Sprintf("%s %s\n", constants.StylePrompt.Render(m.prompt), m.input.View())
 }
