@@ -1,134 +1,428 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
-	"time"
+	"strings"
 
 	"github.com/tez-capital/tezbake/apps"
+	"github.com/tez-capital/tezbake/cli"
+	"github.com/tez-capital/tezbake/constants"
+	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
 
-	//"github.com/pierrec/lz4"
-
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 
 	log "github.com/sirupsen/logrus"
 )
 
-type ArtifactKind string
+// Snapshot configuration
+const snapshotBaseURL = "https://snapshots.tzinit.org"
 
-const (
-	TezosSnapshot ArtifactKind = "tezos-snapshot"
-)
-
-type snapshot struct {
-	BlockHeight    int64        `json:"block_height"`
-	BlockHash      string       `json:"block_hash"`
-	BlockTimestamp time.Time    `json:"block_timestamp"`
-	ChainName      string       `json:"chain_name"`
-	HistoryMode    string       `json:"history_mode"`
-	Url            string       `json:"url"`
-	ArtifactKind   ArtifactKind `json:"artifact_type"`
+// Network and snapshot configuration
+type network struct {
+	name  string
+	modes []string // available snapshot modes
 }
 
-// type snapshots struct {
-// 	Data []snapshot `json:"data"`
-// }
+var availableNetworks = []network{
+	{name: "mainnet", modes: []string{"rolling", "full"}},
+	{name: "ghostnet", modes: []string{"rolling"}},
+	{name: "shadownet", modes: []string{"rolling", "full"}},
+}
+
+// Quick option represents a preset bootstrap configuration
+type quickOption struct {
+	label       string
+	description string
+	network     string
+	mode        string
+	noCheck     bool
+	isAdvanced  bool
+}
+
+var quickOptions = []quickOption{
+	{
+		label:       "Mainnet Rolling (Secure)",
+		description: "Recommended - Downloads mainnet rolling snapshot with integrity verification",
+		network:     "mainnet",
+		mode:        "rolling",
+		noCheck:     false,
+	},
+	{
+		label:       "Mainnet Rolling (Fast)",
+		description: "Skip integrity verification for faster bootstrap",
+		network:     "mainnet",
+		mode:        "rolling",
+		noCheck:     true,
+	},
+	{
+		label:       "Advanced",
+		description: "Choose network, snapshot type, and verification options",
+		isAdvanced:  true,
+	},
+}
+
+// Model states
+type bootstrapState int
+
+const (
+	stateQuickSelect bootstrapState = iota
+	stateNetworkSelect
+	stateModeSelect
+	stateCheckSelect
+	stateKeepSnapshotSelect
+	stateDone
+	stateCanceled
+)
+
+// Bootstrap TUI model
+type bootstrapModel struct {
+	state        bootstrapState
+	cursor       int
+	selectedNet  network
+	selectedMode string
+	noCheck      bool
+	keepSnapshot bool
+	nodePath     string // path to the node being bootstrapped (shown in title if non-default)
+
+	// For display
+	quickOptions        []quickOption
+	networks            []network
+	modes               []string
+	checkOptions        []string
+	keepSnapshotOptions []string
+}
+
+func newBootstrapModel(nodePath string) bootstrapModel {
+	return bootstrapModel{
+		state:               stateQuickSelect,
+		quickOptions:        quickOptions,
+		networks:            availableNetworks,
+		checkOptions:        []string{"Verify integrity (recommended)", "Skip verification (faster)"},
+		keepSnapshotOptions: []string{"Delete snapshot after import (default)", "Keep snapshot on disk"},
+		nodePath:            nodePath,
+	}
+}
+
+func (m bootstrapModel) Init() tea.Cmd {
+	return nil
+}
+
+func (m bootstrapModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "ctrl+c", "q", "esc":
+			m.state = stateCanceled
+			return m, tea.Quit
+
+		case "up", "k":
+			if m.cursor > 0 {
+				m.cursor--
+			}
+
+		case "down", "j":
+			maxItems := m.getMaxItems()
+			if m.cursor < maxItems-1 {
+				m.cursor++
+			}
+
+		case "enter", " ":
+			return m.handleSelection()
+		}
+	}
+	return m, nil
+}
+
+func (m bootstrapModel) getMaxItems() int {
+	switch m.state {
+	case stateQuickSelect:
+		return len(m.quickOptions)
+	case stateNetworkSelect:
+		return len(m.networks)
+	case stateModeSelect:
+		return len(m.modes)
+	case stateCheckSelect:
+		return len(m.checkOptions)
+	case stateKeepSnapshotSelect:
+		return len(m.keepSnapshotOptions)
+	}
+	return 0
+}
+
+func (m bootstrapModel) handleSelection() (tea.Model, tea.Cmd) {
+	switch m.state {
+	case stateQuickSelect:
+		selected := m.quickOptions[m.cursor]
+		if selected.isAdvanced {
+			m.state = stateNetworkSelect
+			m.cursor = 0
+		} else {
+			// Quick option selected - find the network
+			for _, net := range m.networks {
+				if net.name == selected.network {
+					m.selectedNet = net
+					break
+				}
+			}
+			m.selectedMode = selected.mode
+			m.noCheck = selected.noCheck
+			m.state = stateDone
+			return m, tea.Quit
+		}
+
+	case stateNetworkSelect:
+		m.selectedNet = m.networks[m.cursor]
+		m.modes = m.selectedNet.modes
+		if len(m.modes) == 1 {
+			// Only one mode available, auto-select it
+			m.selectedMode = m.modes[0]
+			m.state = stateCheckSelect
+		} else {
+			m.state = stateModeSelect
+		}
+		m.cursor = 0
+
+	case stateModeSelect:
+		m.selectedMode = m.modes[m.cursor]
+		m.state = stateCheckSelect
+		m.cursor = 0
+
+	case stateCheckSelect:
+		m.noCheck = m.cursor == 1 // Index 1 is "Skip verification"
+		m.state = stateKeepSnapshotSelect
+		m.cursor = 0
+
+	case stateKeepSnapshotSelect:
+		m.keepSnapshot = m.cursor == 1 // Index 1 is "Keep snapshot"
+		m.state = stateDone
+		return m, tea.Quit
+	}
+	return m, nil
+}
+
+func (m bootstrapModel) View() string {
+	var s strings.Builder
+
+	switch m.state {
+	case stateQuickSelect:
+		title := "🥯 TezBake Node Bootstrap"
+		if m.nodePath != "" {
+			title = fmt.Sprintf("🥯 TezBake Node Bootstrap [%s]", m.nodePath)
+		}
+		s.WriteString(constants.StyleTitle.Render(title))
+		s.WriteString("\n\n")
+		s.WriteString("Select bootstrap option:\n\n")
+
+		for i, opt := range m.quickOptions {
+			cursor := "  "
+			style := constants.StyleNormal
+			if m.cursor == i {
+				cursor = "▸ "
+				style = constants.StyleSelected
+			}
+			s.WriteString(fmt.Sprintf("%s%s\n", cursor, style.Render(opt.label)))
+			if m.cursor == i {
+				s.WriteString(fmt.Sprintf("    %s\n", constants.StyleDim.Render(opt.description)))
+			}
+		}
+
+	case stateNetworkSelect:
+		s.WriteString(constants.StyleTitle.Render("🌐 Select Network"))
+		s.WriteString("\n\n")
+
+		for i, net := range m.networks {
+			cursor := "  "
+			style := constants.StyleNormal
+			if m.cursor == i {
+				cursor = "▸ "
+				style = constants.StyleSelected
+			}
+			modeInfo := constants.StyleDim.Render(fmt.Sprintf(" (%s)", strings.Join(net.modes, ", ")))
+			s.WriteString(fmt.Sprintf("%s%s%s\n", cursor, style.Render(net.name), modeInfo))
+		}
+
+	case stateModeSelect:
+		s.WriteString(constants.StyleTitle.Render("📦 Select Snapshot Type"))
+		s.WriteString("\n\n")
+		s.WriteString(constants.StyleDim.Render(fmt.Sprintf("Network: %s\n\n", m.selectedNet.name)))
+
+		for i, mode := range m.modes {
+			cursor := "  "
+			style := constants.StyleNormal
+			if m.cursor == i {
+				cursor = "▸ "
+				style = constants.StyleSelected
+			}
+			desc := ""
+			if mode == "rolling" {
+				desc = constants.StyleDim.Render(" - smaller, recent history only")
+			} else if mode == "full" {
+				desc = constants.StyleDim.Render(" - complete block history")
+			}
+			s.WriteString(fmt.Sprintf("%s%s%s\n", cursor, style.Render(mode), desc))
+		}
+
+	case stateCheckSelect:
+		s.WriteString(constants.StyleTitle.Render("🔒 Verification Option"))
+		s.WriteString("\n\n")
+		s.WriteString(constants.StyleDim.Render(fmt.Sprintf("Network: %s, Type: %s\n\n", m.selectedNet.name, m.selectedMode)))
+
+		for i, opt := range m.checkOptions {
+			cursor := "  "
+			style := constants.StyleNormal
+			if m.cursor == i {
+				cursor = "▸ "
+				style = constants.StyleSelected
+			}
+			s.WriteString(fmt.Sprintf("%s%s\n", cursor, style.Render(opt)))
+		}
+
+	case stateKeepSnapshotSelect:
+		s.WriteString(constants.StyleTitle.Render("💾 Keep Snapshot?"))
+		s.WriteString("\n\n")
+		s.WriteString(constants.StyleDim.Render(fmt.Sprintf("Network: %s, Type: %s, Verify: %s\n\n", m.selectedNet.name, m.selectedMode, map[bool]string{true: "no", false: "yes"}[m.noCheck])))
+
+		for i, opt := range m.keepSnapshotOptions {
+			cursor := "  "
+			style := constants.StyleNormal
+			if m.cursor == i {
+				cursor = "▸ "
+				style = constants.StyleSelected
+			}
+			s.WriteString(fmt.Sprintf("%s%s\n", cursor, style.Render(opt)))
+		}
+	}
+
+	s.WriteString(constants.StyleHelp.Render("\n↑/↓ navigate • enter select • q quit"))
+
+	return s.String()
+}
+
+// Build snapshot URL from selections
+func buildSnapshotURL(network, mode string) string {
+	return fmt.Sprintf("%s/%s/%s", snapshotBaseURL, network, mode)
+}
+
+// snapshotSelection holds the result from the interactive selector
+type snapshotSelection struct {
+	url          string
+	noCheck      bool
+	keepSnapshot bool
+	canceled     bool
+}
+
+// Run the interactive snapshot selector
+func runSnapshotSelector(nodePath string) snapshotSelection {
+	model := newBootstrapModel(nodePath)
+	result, err := tea.NewProgram(model, tea.WithInput(os.Stdin), tea.WithOutput(os.Stdout)).Run()
+	if err != nil {
+		log.Errorf("Error running snapshot selector: %v", err)
+		return snapshotSelection{canceled: true}
+	}
+
+	finalModel, ok := result.(bootstrapModel)
+	if !ok {
+		log.Error("Unexpected model type from snapshot selector")
+		return snapshotSelection{canceled: true}
+	}
+
+	if finalModel.state == stateCanceled {
+		return snapshotSelection{canceled: true}
+	}
+
+	url := buildSnapshotURL(finalModel.selectedNet.name, finalModel.selectedMode)
+	return snapshotSelection{
+		url:          url,
+		noCheck:      finalModel.noCheck,
+		keepSnapshot: finalModel.keepSnapshot,
+	}
+}
 
 var bootstrapNodeCmd = &cobra.Command{
-	Use:       "bootstrap-node [--no-check] <url> <block hash>",
-	Short:     "Bootstraps Bake Buddy's Tezos node.",
-	Long:      "Downloads bootstrap and imports it into node databse.",
-	Args:      cobra.MinimumNArgs(0),
+	Use:   "bootstrap-node [--no-check] [--keep-snapshot] [<url or path>] [<block hash>]",
+	Short: "Bootstraps Bake Buddy's Tezos node.",
+	Long: `Downloads bootstrap snapshot and imports it into node database.
+
+The source can be either a URL or a local file path to a snapshot.
+Optionally, a block hash can be provided for verification.
+
+If no source is provided and running in a TTY, an interactive selector will be shown
+to help you choose the appropriate snapshot for your needs.`,
+	Args:      cobra.MaximumNArgs(2),
 	ValidArgs: []string{"url", "block hash"},
 	Run: func(cmd *cobra.Command, args []string) {
 		disableSnapshotCheck, _ := cmd.Flags().GetBool("no-check")
+		keepSnapshot, _ := cmd.Flags().GetBool("keep-snapshot")
 
-		var chosenSnapshot *snapshot = nil
-		//artifactKind := TezosSnapshot
+		var snapshotSource string
+		var blockHash string
 
-		// if system.IsTty() && len(args) == 0 {
-		// 	resp, err := http.Get("https://xtz-shots.io/tezos-snapshots.json")
-		// 	util.AssertEE(err, "Failed to get list of available snapshots", constants.ExitExternalError)
-		// 	defer resp.Body.Close()
+		// Determine if we're bootstrapping a non-default instance
+		var nodePath string
+		if cli.BBdir != constants.DefaultBBDirectory {
+			nodePath = apps.Node.GetPath()
+		}
 
-		// 	body, err := io.ReadAll(resp.Body)
-		// 	util.AssertEE(err, "Failed to get list of available snapshots", constants.ExitExternalError)
-
-		// 	var snapshots snapshots
-		// 	err = json.Unmarshal(body, &snapshots)
-		// 	util.AssertEE(err, "Failed to get list of available snapshots", constants.ExitExternalError)
-
-		// 	var (
-		// 		chainName   string
-		// 		historyMode string
-		// 	)
-		// 	prompt := &survey.Select{
-		// 		Message: "Which chain do you want to bootstrap for?",
-		// 		Options: []string{"mainnet", "ghostnet"},
-		// 	}
-		// 	err = survey.AskOne(prompt, &chainName)
-		// 	util.AssertEE(err, "failed to get user input", constants.ExitUserInvalidInput)
-
-		// 	if !disableSnapshotCheck { // if parameter wasn't set, ask user
-		// 		prompt = &survey.Select{
-		// 			Message: "What kind of artifact do you want use to bootstrap?",
-		// 			Options: []string{string(Tarball), string(TezosSnapshot)},
-		// 		}
-		// 		err = survey.AskOne(prompt, &artifactKind)
-		// 		util.AssertEE(err, "failed to get user input", constants.ExitUserInvalidInput)
-		// 	}
-
-		// 	prompt = &survey.Select{
-		// 		Message: "What kind of history mode should be used?",
-		// 		Options: []string{"rolling", "archive"},
-		// 	}
-		// 	err = survey.AskOne(prompt, &historyMode)
-		// 	util.AssertEE(err, "failed to get user input", constants.ExitUserInvalidInput)
-
-		// 	usableSnapshots := lo.Filter(snapshots.Data, func(s snapshot, _ int) bool {
-		// 		return s.ArtifactKind == artifactKind && s.ChainName == chainName && s.HistoryMode == historyMode
-		// 	})
-		// 	if len(usableSnapshots) == 0 {
-		// 		log.Error("No snapshots found for given criteria!")
-		// 		os.Exit(constants.ExitExternalError)
-		// 	}
-
-		// 	slices.SortFunc(usableSnapshots, func(i, j snapshot) int {
-		// 		return int(j.BlockHeight - i.BlockHeight)
-		// 	})
-		// 	snapshotOptions := lo.Map(usableSnapshots, func(s snapshot, _ int) string {
-		// 		return fmt.Sprintf("%d - %s", s.BlockHeight, s.BlockTimestamp.Format("2006-01-02 15:04:05"))
-		// 	})
-
-		// 	prompt = &survey.Select{
-		// 		Message: "Please choose snapshot you want to use:",
-		// 		Options: snapshotOptions,
-		// 	}
-		// 	var snapshotBlockAndTime string
-		// 	err = survey.AskOne(prompt, &snapshotBlockAndTime)
-		// 	util.AssertEE(err, "failed to get user input", constants.ExitUserInvalidInput)
-
-		// 	snapshotBlock, _ := strconv.ParseInt(snapshotBlockAndTime[:strings.Index(snapshotBlockAndTime, " - ")], 10, 64)
-		// 	snapshot, found := lo.Find(usableSnapshots, func(s snapshot) bool {
-		// 		return s.BlockHeight == snapshotBlock
-		// 	})
-		// 	util.AssertBE(found, "Failed to find snapshot!", constants.ExitInternalError)
-		// 	chosenSnapshot = &snapshot
-		// }
-
-		//if artifactKind == TezosSnapshot {
-		bootstrapArgs := make([]string, 0)
-		bootstrapArgs = append(bootstrapArgs, "bootstrap")
-
-		if chosenSnapshot != nil {
-			bootstrapArgs = append(bootstrapArgs, chosenSnapshot.Url)
-			bootstrapArgs = append(bootstrapArgs, chosenSnapshot.BlockHash)
+		// If no arguments provided and we're in a TTY, show interactive selector
+		if len(args) == 0 && system.IsTty() {
+			selection := runSnapshotSelector(nodePath)
+			if selection.canceled {
+				log.Info("Bootstrap canceled.")
+				os.Exit(0)
+			}
+			snapshotSource = selection.url
+			if selection.noCheck {
+				disableSnapshotCheck = true
+			}
+			if selection.keepSnapshot {
+				keepSnapshot = true
+			}
+		} else if len(args) > 0 {
+			snapshotSource = args[0]
+			if len(args) > 1 {
+				blockHash = args[1]
+			}
 		} else {
-			bootstrapArgs = append(bootstrapArgs, args...)
+			log.Error("No snapshot URL or path provided. Use --help for usage information.")
+			os.Exit(1)
+		}
+
+		if nodePath != "" {
+			log.Infof("Bootstrapping node at: %s", nodePath)
+		}
+		log.Infof("Bootstrapping from: %s", snapshotSource)
+		if blockHash != "" {
+			log.Infof("Block hash: %s", blockHash)
+		}
+		if disableSnapshotCheck {
+			log.Warn("Snapshot integrity verification disabled")
+		}
+		if keepSnapshot {
+			log.Info("Snapshot will be kept on disk after import")
+		}
+
+		// Check if node was running and stop it before bootstrap
+		wasRunning, _ := apps.Node.IsServiceStatus(constants.NodeAppServiceId, "running")
+		if wasRunning {
+			log.Info("Stopping node for bootstrap...")
+			exitCode, err := apps.Node.Stop()
+			util.AssertEE(err, "Failed to stop node before bootstrap", exitCode)
+		}
+
+		bootstrapArgs := []string{"bootstrap", snapshotSource}
+		if blockHash != "" {
+			bootstrapArgs = append(bootstrapArgs, blockHash)
 		}
 		if disableSnapshotCheck {
 			bootstrapArgs = append(bootstrapArgs, "--no-check")
 		}
+		if keepSnapshot {
+			bootstrapArgs = append(bootstrapArgs, "--keep-snapshot")
+		}
+
 		exitCode, err := apps.Node.Execute(bootstrapArgs...)
 		util.AssertEE(err, "Failed to bootstrap tezos node", exitCode)
 
@@ -136,89 +430,19 @@ var bootstrapNodeCmd = &cobra.Command{
 		exitCode, err = apps.Node.UpgradeStorage()
 		util.AssertEE(err, "Failed to upgrade tezos storage", exitCode)
 
+		// Restart node if it was running before bootstrap
+		if wasRunning {
+			log.Info("Restarting node...")
+			exitCode, err = apps.Node.Start()
+			util.AssertEE(err, "Failed to restart node after bootstrap", exitCode)
+		}
+
 		os.Exit(exitCode)
-		//}
-
-		// if isRemote, locator := ami.IsRemoteApp(bb.Node.GetPath()); isRemote {
-		// 	session, err := locator.OpenAppRemoteSessionS()
-		// 	util.AssertE(err, "Failed to open remote session!")
-		// 	exitCode, _ := session.ProxyToRemoteApp()
-		// 	os.Exit(exitCode)
-		// }
-
-		// // tarball bootstrap
-		// system.RequireElevatedUser()
-		// // curl -LfsS "https://mainnet.xtz-shots.io/rolling-tarball" | lz4 -d | tar -x -C "/var/tezos"
-		// log.Trace("Preparing directories...")
-		// tmpDir := path.Join(bb.Node.GetPath(), ".tarball-tmp")
-		// util.AssertEE(os.MkdirAll(tmpDir, 0700), "Failed to create directory structure for tarball download!", constants.ExitIOError)
-		// newDataDir := path.Join(tmpDir, "new-data")
-		// newDataContentDir := path.Join(newDataDir, "node", "data")
-		// util.AssertEE(os.MkdirAll(newDataDir, 0700), "Failed to create directory structure for tarball download!", constants.ExitIOError)
-
-		// tarballFileName := "bootstrap.tarball"
-		// tarballFilePath := path.Join(tmpDir, tarballFileName)
-
-		// util.AssertBE(chosenSnapshot != nil || len(args) > 0, "No snapshot url provided!", constants.ExitInvalidArgs)
-		// var tarbalUrl string
-		// if chosenSnapshot != nil && len(args) == 0 {
-		// 	tarbalUrl = chosenSnapshot.Url
-		// } else {
-		// 	tarbalUrl = args[0]
-		// }
-
-		// log.Info("Downloading bootstrap tarball...")
-		// os.Remove(tarballFilePath)
-		// util.AssertE(util.DownloadFile(tarbalUrl, tarballFilePath, true), "Failed to download tarball!")
-
-		// log.Info("Extracting the tarball...")
-		// inputFile, err := os.Open(tarballFilePath)
-		// util.AssertEE(err, "Failed to open downloaded tarball!", constants.ExitIOError)
-		// defer inputFile.Close()
-
-		// util.AssertE(archive.UntarLz4(inputFile, newDataDir), "Failed to extract downloaded tarball!")
-
-		// wasRunning, _ := bb.Node.IsServiceStatus(ami.NodeService, "running")
-		// if wasRunning {
-		// 	log.Info("Node services up. Running bootstrap in live mode...")
-		// 	bb.Node.Stop()
-		// }
-		// nodeDataDir := path.Join(bb.Node.GetPath(), "data", ".tezos-node")
-		// util.AssertEE(os.MkdirAll(path.Dir(nodeDataDir), 0700), "Failed to create directory tree for node data!", constants.ExitIOError)
-		// identityFileName := "identity.json"
-		// peersFileName := "peers.json"
-		// configFileName := "config.json"
-
-		// os.Rename(path.Join(nodeDataDir, identityFileName), path.Join(newDataContentDir, identityFileName))
-		// os.Rename(path.Join(nodeDataDir, peersFileName), path.Join(newDataContentDir, peersFileName))
-		// os.Rename(path.Join(nodeDataDir, configFileName), path.Join(newDataContentDir, configFileName))
-
-		// err = os.RemoveAll(nodeDataDir)
-		// util.AssertEE(err, "Failed to remove old node data directory!", constants.ExitIOError)
-		// err = os.Rename(newDataContentDir, nodeDataDir)
-		// util.AssertEE(err, "Failed to deploy new data directory!", constants.ExitIOError)
-
-		// nodeDef, _, err := bb.Node.LoadAppDefinition()
-		// util.AssertEE(err, "Failed to load node definition!", constants.ExitAppConfigurationLoadFailed)
-		// nodeUser, ok := nodeDef["user"].(string)
-		// util.AssertBE(ok, "Failed to get username from node!", constants.ExitInvalidUser)
-
-		// log.Info("Upgrading storage...")
-		// exitCode, err := bb_module_node.Module.UpgradeStorage()
-		// util.AssertEE(err, "Failed to upgrade tezos storage", exitCode)
-
-		// util.ChownR(nodeUser, path.Join(bb.Node.GetPath(), "data"))
-
-		// os.RemoveAll(tmpDir)
-
-		// if wasRunning {
-		// 	bb.Node.Start()
-		// }
-		// log.Info("Node bootstrapped from tarball successfully...")
 	},
 }
 
 func init() {
-	bootstrapNodeCmd.Flags().Bool("no-check", false, "bootstraps node from tarball without veryfing snapshot integrity")
+	bootstrapNodeCmd.Flags().Bool("no-check", false, "Bootstrap node without verifying snapshot integrity")
+	bootstrapNodeCmd.Flags().Bool("keep-snapshot", false, "Keep the snapshot file on disk after import")
 	RootCmd.AddCommand(bootstrapNodeCmd)
 }
