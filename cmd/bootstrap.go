@@ -22,13 +22,12 @@ const snapshotBaseURL = "https://snapshots.tzinit.org"
 
 // Network and snapshot configuration
 type network struct {
-	name      string
-	modes     []string // available snapshot modes
-	isDefault bool
+	name  string
+	modes []string // available snapshot modes
 }
 
 var availableNetworks = []network{
-	{name: "mainnet", modes: []string{"rolling", "full"}, isDefault: true},
+	{name: "mainnet", modes: []string{"rolling", "full"}},
 	{name: "ghostnet", modes: []string{"rolling"}},
 	{name: "shadownet", modes: []string{"rolling", "full"}},
 }
@@ -86,7 +85,6 @@ type bootstrapModel struct {
 	selectedMode string
 	noCheck      bool
 	keepSnapshot bool
-	isAdvanced   bool   // tracks if we went through advanced flow
 	nodePath     string // path to the node being bootstrapped (shown in title if non-default)
 
 	// For display
@@ -160,7 +158,6 @@ func (m bootstrapModel) handleSelection() (tea.Model, tea.Cmd) {
 		selected := m.quickOptions[m.cursor]
 		if selected.isAdvanced {
 			m.state = stateNetworkSelect
-			m.isAdvanced = true
 			m.cursor = 0
 		} else {
 			// Quick option selected - find the network
@@ -345,21 +342,23 @@ func runSnapshotSelector(nodePath string) snapshotSelection {
 }
 
 var bootstrapNodeCmd = &cobra.Command{
-	Use:   "bootstrap-node [--no-check] [--keep-snapshot] [<url or path>]",
+	Use:   "bootstrap-node [--no-check] [--keep-snapshot] [<url or path>] [<block hash>]",
 	Short: "Bootstraps Bake Buddy's Tezos node.",
 	Long: `Downloads bootstrap snapshot and imports it into node database.
 
 The source can be either a URL or a local file path to a snapshot.
+Optionally, a block hash can be provided for verification.
 
 If no source is provided and running in a TTY, an interactive selector will be shown
 to help you choose the appropriate snapshot for your needs.`,
-	Args:      cobra.MinimumNArgs(0),
-	ValidArgs: []string{"url"},
+	Args:      cobra.MaximumNArgs(2),
+	ValidArgs: []string{"url", "block hash"},
 	Run: func(cmd *cobra.Command, args []string) {
 		disableSnapshotCheck, _ := cmd.Flags().GetBool("no-check")
 		keepSnapshot, _ := cmd.Flags().GetBool("keep-snapshot")
 
 		var snapshotSource string
+		var blockHash string
 
 		// Determine if we're bootstrapping a non-default instance
 		var nodePath string
@@ -383,6 +382,9 @@ to help you choose the appropriate snapshot for your needs.`,
 			}
 		} else if len(args) > 0 {
 			snapshotSource = args[0]
+			if len(args) > 1 {
+				blockHash = args[1]
+			}
 		} else {
 			log.Error("No snapshot URL or path provided. Use --help for usage information.")
 			os.Exit(1)
@@ -392,6 +394,9 @@ to help you choose the appropriate snapshot for your needs.`,
 			log.Infof("Bootstrapping node at: %s", nodePath)
 		}
 		log.Infof("Bootstrapping from: %s", snapshotSource)
+		if blockHash != "" {
+			log.Infof("Block hash: %s", blockHash)
+		}
 		if disableSnapshotCheck {
 			log.Warn("Snapshot integrity verification disabled")
 		}
@@ -408,6 +413,9 @@ to help you choose the appropriate snapshot for your needs.`,
 		}
 
 		bootstrapArgs := []string{"bootstrap", snapshotSource}
+		if blockHash != "" {
+			bootstrapArgs = append(bootstrapArgs, blockHash)
+		}
 		if disableSnapshotCheck {
 			bootstrapArgs = append(bootstrapArgs, "--no-check")
 		}
