@@ -49,11 +49,11 @@ var removeCmd = &cobra.Command{
 			fmt.Println("")
 			switch {
 			case removingAllInstalled && shouldRemoveAll:
-				prompt = "Are you sure you want to remove all files related to tezbake instance?"
+				prompt = fmt.Sprintf("Are you sure you want to remove all files related to tezbake instance - %s?", cli.BBdir)
 			case shouldRemoveAll:
-				prompt = fmt.Sprintf("Are you sure you want to remove all files related to %s?", appsToRemove)
+				prompt = fmt.Sprintf("Are you sure you want to remove all files related to %s (%s)?", appsToRemove, cli.BBdir)
 			default:
-				prompt = fmt.Sprintf("Are you sure you want to remove %s data?", appsToRemove)
+				prompt = fmt.Sprintf("Are you sure you want to remove %s data (%s)?", appsToRemove, cli.BBdir)
 			}
 			isUserConfirmed = util.Confirm(prompt, false, "Failed to confirm removal!")
 			if isUserConfirmed {
@@ -89,7 +89,7 @@ var removeCmd = &cobra.Command{
 		if removingAllInstalled && shouldRemoveAll {
 			os.RemoveAll(cli.BBdir)
 		}
-		log.Info("BB removal successful")
+		log.Info("tezbake removal successful")
 	},
 }
 
