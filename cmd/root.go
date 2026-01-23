@@ -65,7 +65,7 @@ Copyright © %d tez.capital
 			if cmd.Flags().Changed("path") {
 				cli.BBdir, _ = cmd.Flags().GetString("path")
 			} else {
-				bbDir := os.Getenv("BB_DIR")
+				bbDir := os.Getenv("TEZBAKE_INSTANCE_PATH")
 				if bbDir != "" {
 					cli.BBdir = bbDir
 				}

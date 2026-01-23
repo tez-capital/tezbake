@@ -4,17 +4,94 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
 )
 
+// enterInstanceEnvironment spawns an interactive shell with the instance environment
+func enterInstanceEnvironment(alias, instancePath string) error {
+	shell := os.Getenv("SHELL")
+	if shell == "" {
+		shell = "/bin/sh"
+	}
+
+	// Create the instance path if it doesn't exist
+	// If creation fails (likely permission denied), try with sudo for just the mkdir
+	if err := os.MkdirAll(instancePath, 0755); err != nil {
+		if os.IsPermission(err) {
+			// Only elevate the mkdir operation, not the whole command
+			// This way the user enters the shell as themselves, not root
+			mkdirCmd := exec.Command("sudo", "mkdir", "-p", instancePath)
+			mkdirCmd.Stdin = os.Stdin
+			mkdirCmd.Stdout = os.Stdout
+			mkdirCmd.Stderr = os.Stderr
+			if err := mkdirCmd.Run(); err != nil {
+				return fmt.Errorf("failed to create instance path with sudo: %w", err)
+			}
+		} else {
+			return fmt.Errorf("failed to create instance path: %w", err)
+		}
+	}
+
+	// Set up the environment
+	env := os.Environ()
+	env = append(env, fmt.Sprintf("TEZBAKE_INSTANCE_PATH=%s", instancePath))
+
+	// Set custom colorful PS1 based on shell type and determine shell args
+	// Format: tezbake ❯ instance ❯ <alias> <pwd> ❯
+	// Colors based on tez.capital branding with powerline-style arrows
+	shellName := filepath.Base(shell)
+	var shellArgs []string
+
+	switch shellName {
+	case "zsh":
+		// Zsh uses %F{color} for colors, %B %b for bold, %~ for pwd with ~ substitution
+		// Use -f to prevent loading .zshrc which would override PS1
+		ps1 := fmt.Sprintf("%%F{cyan}%%Btezbake%%b%%f %%F{blue}❯%%f %%F{75}instance%%f %%F{blue}❯%%f %%F{159}%%B%s%%b%%f %%F{243}%%~%%f %%F{blue}❯%%f ", alias)
+		env = append(env, "PS1="+ps1)
+		shellArgs = append(shellArgs, "-f")
+	case "bash":
+		// Bash uses \[ \] to wrap non-printing characters, \w for current directory
+		// Use --norc --noprofile to prevent loading config files
+		ps1 := fmt.Sprintf("\\[\\033[1;36m\\]tezbake\\[\\033[0m\\] \\[\\033[34m\\]❯\\[\\033[0m\\] \\[\\033[94m\\]instance\\[\\033[0m\\] \\[\\033[34m\\]❯\\[\\033[0m\\] \\[\\033[1;96m\\]%s\\[\\033[0m\\] \\[\\033[90m\\]\\w\\[\\033[0m\\] \\[\\033[34m\\]❯\\[\\033[0m\\] ", alias)
+		env = append(env, "PS1="+ps1)
+		shellArgs = append(shellArgs, "--norc", "--noprofile")
+	default:
+		// For other shells, use simple ANSI codes with $PWD
+		ps1 := fmt.Sprintf("\033[1;36mtezbake\033[0m \033[34m❯\033[0m \033[94minstance\033[0m \033[34m❯\033[0m \033[1;96m%s\033[0m \033[90m$PWD\033[0m \033[34m❯\033[0m ", alias)
+		env = append(env, "PS1="+ps1)
+	}
+
+	// Create the command with appropriate flags
+	shellCmd := exec.Command(shell, shellArgs...)
+	shellCmd.Env = env
+	shellCmd.Stdin = os.Stdin
+	shellCmd.Stdout = os.Stdout
+	shellCmd.Stderr = os.Stderr
+	shellCmd.Dir = instancePath
+
+	err := shellCmd.Run()
+	// Exit with the shell's exit code to prevent cobra from printing help
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			os.Exit(exitErr.ExitCode())
+		}
+		os.Exit(1)
+	}
+	os.Exit(0)
+	return nil // unreachable, but required by compiler
+}
+
 var instanceCmd = &cobra.Command{
-	Use:                "instance [alias] [command]",
-	Short:              "Executes command on a specific tezbake instance",
-	Long:               "Proxies the command to the specified tezbake instance by setting the appropriate path.",
+	Use:   "instance [alias] [command]",
+	Short: "Executes command on a specific tezbake instance or enters the instance environment",
+	Long: `Proxies the command to the specified tezbake instance by setting the appropriate path.
+If no command is provided, enters an interactive shell environment for the instance.`,
 	Aliases:            []string{"i"},
 	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -35,7 +112,17 @@ var instanceCmd = &cobra.Command{
 
 		alias := args[0]
 		// Determine the new path for the instance
-		instancePath := filepath.Join(constants.DefaultBBDirectory, "instances", alias)
+		var instancePath string
+		if alias == "default" || strings.ToLower(alias) == "default" {
+			instancePath = constants.DefaultBBDirectory
+		} else {
+			instancePath = filepath.Join(constants.DefaultBBDirectory, "instances", alias)
+		}
+
+		// If no additional args, enter the instance environment
+		if len(args) == 1 {
+			return enterInstanceEnvironment(alias, instancePath)
+		}
 
 		// Prepare arguments for the recursive execution
 		// We prepend --path <instancePath> to the arguments
