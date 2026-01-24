@@ -405,7 +405,7 @@ to help you choose the appropriate snapshot for your needs.`,
 		}
 
 		// Check if node was running and stop it before bootstrap
-		wasRunning, _ := apps.Node.IsServiceStatus(constants.NodeAppServiceId, "running")
+		wasRunning, _ := apps.Node.IsAnyServiceStatus("running")
 		if wasRunning {
 			log.Info("Stopping node for bootstrap...")
 			exitCode, err := apps.Node.Stop()

@@ -45,3 +45,31 @@ func UnmarshalIfNotEmptyArray[T any](data json.RawMessage, result T) error {
 	}
 	return json.Unmarshal(data, result)
 }
+
+type AppServiceStatusCollector interface {
+	GetServiceInfo() (map[string]AmiServiceInfo, error)
+}
+
+func IsServiceStatus(app AppServiceStatusCollector, id string, status string) (bool, error) {
+	serviceInfo, err := app.GetServiceInfo()
+	if err != nil {
+		return false, err
+	}
+	if service, ok := serviceInfo[id]; ok && service.Status == status {
+		return true, nil
+	}
+	return false, nil
+}
+
+func IsAnyServiceStatus(app AppServiceStatusCollector, status string) (bool, error) {
+	serviceInfo, err := app.GetServiceInfo()
+	if err != nil {
+		return false, err
+	}
+	for _, service := range serviceInfo {
+		if service.Status == status {
+			return true, nil
+		}
+	}
+	return false, nil
+}

@@ -131,14 +131,11 @@ func (app *Signer) GetServiceInfo() (map[string]base.AmiServiceInfo, error) {
 }
 
 func (app *Signer) IsServiceStatus(id string, status string) (bool, error) {
-	serviceInfo, err := app.GetServiceInfo()
-	if err != nil {
-		return false, err
-	}
-	if service, ok := serviceInfo[id]; ok && service.Status == status {
-		return true, nil
-	}
-	return false, nil
+	return base.IsServiceStatus(app, id, status)
+}
+
+func (app *Signer) IsAnyServiceStatus(status string) (bool, error) {
+	return base.IsAnyServiceStatus(app, status)
 }
 
 func (app *Signer) PrintInfo(optionsJson []byte) error {

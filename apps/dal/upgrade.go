@@ -3,7 +3,6 @@ package dal
 import (
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps/base"
-	"github.com/tez-capital/tezbake/constants"
 	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
 )
@@ -14,8 +13,8 @@ func (app *DalNode) Upgrade(ctx *base.UpgradeContext, args ...string) (int, erro
 		ami.PrepareRemote(app.GetPath(), locator, system.SSH_MODE_KEY)
 	}
 
-	wasRunning, _ := app.IsServiceStatus(constants.DalAppServiceId, "running")
-	if !isRemote && wasRunning {
+	wasRunning, _ := app.IsAnyServiceStatus("running")
+	if wasRunning {
 		exitCode, err := app.Stop()
 		if err != nil {
 			return exitCode, err

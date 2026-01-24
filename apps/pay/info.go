@@ -9,7 +9,6 @@ import (
 
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps/base"
-	"github.com/tez-capital/tezbake/constants"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
@@ -108,14 +107,11 @@ func (app *Tezpay) GetServiceInfo() (map[string]base.AmiServiceInfo, error) {
 }
 
 func (app *Tezpay) IsServiceStatus(id string, status string) (bool, error) {
-	serviceInfo, err := app.GetServiceInfo()
-	if err != nil {
-		return false, err
-	}
-	if service, ok := serviceInfo[constants.TezpayAppServiceId]; ok && service.Status == status {
-		return true, nil
-	}
-	return false, nil
+	return base.IsServiceStatus(app, id, status)
+}
+
+func (app *Tezpay) IsAnyServiceStatus(status string) (bool, error) {
+	return base.IsAnyServiceStatus(app, status)
 }
 
 func (app *Tezpay) PrintInfo(optionsJson []byte) error {
