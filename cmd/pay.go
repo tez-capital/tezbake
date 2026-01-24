@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"os"
+	"strings"
 
+	"github.com/samber/lo"
 	"github.com/tez-capital/tezbake/apps"
 	"github.com/tez-capital/tezbake/constants"
 	"github.com/tez-capital/tezbake/util"
@@ -18,6 +20,12 @@ var payCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, _ []string) {
 		args := util.GetCommandArgs(cmd)
 		util.AssertBE(apps.Pay.IsInstalled(), "Pay app is not installed!", constants.ExitAppNotInstalled)
+		nonOptionArgsCount := lo.CountBy(args, func(s string) bool { return !strings.HasPrefix(s, "-") })
+		hasHelpOption := lo.ContainsBy(args, func(s string) bool { return s == "-h" || s == "--help" })
+
+		if nonOptionArgsCount == 0 && !hasHelpOption {
+			args = append([]string{"pay"}, args...) // default to "pay" subcommand
+		}
 		if len(args) > 0 && args[0] == "-" {
 			args[0] = "pay"
 		}
