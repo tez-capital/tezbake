@@ -8,9 +8,8 @@ import (
 
 	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
+	"github.com/tez-capital/tezbake/logging"
 	"github.com/tez-capital/tezbake/util"
-
-	log "github.com/sirupsen/logrus"
 )
 
 func getCurrentUser() *user.User {
@@ -27,10 +26,10 @@ func isElevated() bool {
 func RequireElevatedUser(injectArgs ...string) {
 	cli.ElevationRequired = true
 	if isElevated() {
-		log.Trace("Process already elevated...")
+		logging.Trace("Process already elevated...")
 		return
 	} else {
-		log.Trace("Elevation required! Trying to elevate...")
+		logging.Trace("Elevation required! Trying to elevate...")
 	}
 
 	// try elevate
@@ -57,7 +56,7 @@ func RequireElevatedUser(injectArgs ...string) {
 
 		select {
 		case <-time.After(3 * time.Second):
-			log.Warn("Timeout occurred while testing sudo access")
+			logging.Warn("Timeout occurred while testing sudo access")
 		case err := <-done:
 			util.AssertEE(err, "Failed to execute test sudo!", constants.ExitExternalError)
 			testSuccess = true
@@ -84,7 +83,7 @@ func RequireElevatedUser(injectArgs ...string) {
 	}
 	// other options?
 	if !IsTty() {
-		log.Debug("No self elevation method available!")
+		logging.Debug("No self elevation method available!")
 		os.Exit(constants.ExitElevationRequired)
 	}
 	_, err := exec.LookPath("sudo")

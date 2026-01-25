@@ -7,10 +7,10 @@ import (
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps"
 	"github.com/tez-capital/tezbake/constants"
+	"github.com/tez-capital/tezbake/logging"
 	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +29,7 @@ var setupSoftWalletCmd = &cobra.Command{
 		isAnySelected := shouldOperateOnSigner || shouldOperateOnNode
 
 		if (shouldOperateOnSigner || !isAnySelected) && apps.Signer.IsInstalled() {
-			log.Info("setting up ledger for signer...")
+			logging.Info("setting up ledger for signer...")
 			wasRunning, _ := apps.Signer.IsServiceStatus(constants.SignerAppServiceId, "running")
 			if wasRunning {
 				exitCode, err := apps.Signer.Stop()
@@ -64,7 +64,7 @@ var setupSoftWalletCmd = &cobra.Command{
 		if (shouldOperateOnNode || !isAnySelected) && apps.Node.IsInstalled() {
 			var wasSignerRunning bool
 
-			log.Info("Importing key to the node...")
+			logging.Info("Importing key to the node...")
 			wasSignerRunning, _ = apps.Signer.IsServiceStatus(constants.SignerAppServiceId, "running")
 			if !wasSignerRunning {
 				exitCode, err := apps.Signer.Start()

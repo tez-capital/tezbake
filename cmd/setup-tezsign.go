@@ -7,10 +7,10 @@ import (
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps"
 	"github.com/tez-capital/tezbake/constants"
+	"github.com/tez-capital/tezbake/logging"
 	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +34,7 @@ var setupTezsignCmd = &cobra.Command{
 		isAnySelected := shouldOperateOnSigner || shouldOperateOnNode
 
 		if tezsignImportKeyFlag.IsTrue() && (tezsignPlatformFlag.IsTrue() || init) {
-			log.Fatal("Cannot use --import-key together with --platform or --init. Please run setup-tezsign in two steps.")
+			logging.Error("Cannot use --import-key together with --platform or --init. Please run setup-tezsign in two steps.")
 			os.Exit(constants.ExitInvalidArgs)
 			return
 		}
@@ -44,7 +44,7 @@ var setupTezsignCmd = &cobra.Command{
 		}
 
 		if tezsignImportKeyFlag.IsTrue() { // tezsign import requires signer to be running
-			log.Info("ensuring signer is running for tezsign key import...")
+			logging.Info("ensuring signer is running for tezsign key import...")
 			wasRunning, _ := apps.Signer.IsServiceStatus(constants.TezpayAppServiceId, "running")
 			if !wasRunning {
 				system.RequireElevatedUser() // starting signer service requires elevated permissions
@@ -55,7 +55,7 @@ var setupTezsignCmd = &cobra.Command{
 		}
 
 		if (shouldOperateOnSigner || !isAnySelected) && apps.Signer.IsInstalled() {
-			log.Info("setting up tezsign for signer...")
+			logging.Info("setting up tezsign for signer...")
 
 			amiArgs := []string{"setup-tezsign"}
 
@@ -94,7 +94,7 @@ var setupTezsignCmd = &cobra.Command{
 		}
 
 		if (shouldOperateOnNode || !isAnySelected) && apps.Node.IsInstalled() && tezsignImportKeyFlag.IsTrue() { // node only imports key
-			log.Info("Importing key to the node...")
+			logging.Info("Importing key to the node...")
 
 			isSignerRunning, _ := apps.Signer.IsServiceStatus(constants.SignerAppServiceId, "running")
 			util.AssertBE(isSignerRunning, "Signer is not running. Please start signer services.", constants.ExitSignerNotOperational)
