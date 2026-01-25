@@ -2,57 +2,20 @@ package cmd
 
 import (
 	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
+	"log/slog"
 	"os"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/spf13/cobra"
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
-
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
+	"github.com/tez-capital/tezbake/logging"
 )
-
-type bbTextFormatter struct {
-	log.TextFormatter
-}
-
-func (f *bbTextFormatter) Format(entry *log.Entry) ([]byte, error) {
-	result := entry.Time.Format("15:04:05")
-	result = result + " [" + strings.ToUpper(string(entry.Level.String())) + "] (tezbake) " + entry.Message + "\n"
-	for k, v := range entry.Data {
-		result = result + k + "=" + fmt.Sprint(v) + "\n"
-	}
-	return []byte(result), nil
-}
-
-type bbJsonFormatter struct {
-	log.JSONFormatter
-}
-
-func (f *bbJsonFormatter) Format(entry *log.Entry) ([]byte, error) {
-	//strconv.FormatInt(entry.Time.Unix(), 10)
-	l, err := f.JSONFormatter.Format(entry)
-	if err != nil {
-		return []byte{}, err
-	}
-	result := make(map[string]any)
-	err = json.Unmarshal(l, &result)
-	if err != nil {
-		return []byte{}, err
-	}
-	delete(result, "time")
-	result["timestamp"] = strconv.FormatInt(entry.Time.Unix(), 10)
-	result["module"] = "tezbake"
-	resultLog, err := json.Marshal(result)
-	resultLog = append(resultLog, byte('\n'))
-	return resultLog, err
-}
 
 var (
 	RootCmd = &cobra.Command{
@@ -71,23 +34,9 @@ Copyright © %d tez.capital
 				}
 			}
 
-			switch level, _ := cmd.Flags().GetString("log-level"); level {
-			case "trace":
-				log.SetLevel(log.TraceLevel)
-				cli.LogLevel = "trace"
-			case "debug":
-				log.SetLevel(log.DebugLevel)
-				cli.LogLevel = "debug"
-			case "warn":
-				log.SetLevel(log.WarnLevel)
-				cli.LogLevel = "warn"
-			case "error":
-				log.SetLevel(log.ErrorLevel)
-				cli.LogLevel = "error"
-			default:
-				log.SetLevel(log.InfoLevel)
-			}
-			log.Trace("Log level set to '" + cli.LogLevel + "'")
+			level := slog.LevelInfo
+			levelFlag, _ := cmd.Flags().GetString("log-level")
+			level, cli.LogLevel = logging.ParseLevel(levelFlag)
 
 			remoteVars, _ := cmd.Flags().GetString("remote-instance-vars")
 			if remoteVars != "" {
@@ -102,25 +51,12 @@ Copyright © %d tez.capital
 			}
 
 			format, _ := cmd.Flags().GetString("output-format")
+			handler, jsonFormat, formatLogMsg := logging.NewHandler(format, level, os.Stdout, os.Stderr)
+			cli.JsonLogFormat = jsonFormat
 
-			switch format {
-			case "json":
-				cli.JsonLogFormat = true
-				log.SetFormatter(&bbJsonFormatter{})
-				log.Trace("Output format set to 'json'")
-			case "text":
-				log.SetFormatter(&bbTextFormatter{})
-				log.Trace("Output format set to 'text'")
-			default:
-				if fileInfo, _ := os.Stdout.Stat(); (fileInfo.Mode() & os.ModeCharDevice) == 0 {
-					cli.JsonLogFormat = true
-					log.SetFormatter(&bbJsonFormatter{})
-					log.Trace("Output format automatically set to 'json'")
-				} else {
-					log.SetFormatter(&bbTextFormatter{})
-					log.Trace("Output format automatically set to 'text'")
-				}
-			}
+			slog.SetDefault(slog.New(handler))
+			slog.Log(context.Background(), logging.LevelTrace, "Log level set to '"+cli.LogLevel+"'")
+			slog.Log(context.Background(), logging.LevelTrace, formatLogMsg)
 
 			// init ami options
 			ami.SetOptions(ami.Options{
