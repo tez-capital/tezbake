@@ -4,10 +4,10 @@ import (
 	"os"
 
 	"github.com/tez-capital/tezbake/ami"
+	"github.com/tez-capital/tezbake/logging"
 	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -20,7 +20,7 @@ var setupAmiCmd = &cobra.Command{
 
 		exitCode, err := ami.Install(util.GetCommandBoolFlag(cmd, "silent"))
 		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("Failed to install ami and eli!")
+			logging.Error("Failed to install ami and eli!", "error", err)
 			os.Exit(exitCode)
 		}
 	},

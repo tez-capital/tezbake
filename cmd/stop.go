@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	"github.com/tez-capital/tezbake/apps"
+	"github.com/tez-capital/tezbake/logging"
 	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +26,7 @@ var stopCmd = &cobra.Command{
 			util.AssertEE(err, fmt.Sprintf("Failed to stop %s's services!", v.GetId()), exitCode)
 		}
 
-		log.Info("Requested services stopped successfully")
+		logging.Info("Requested services stopped successfully")
 	},
 }
 
