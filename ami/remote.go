@@ -16,12 +16,12 @@ import (
 
 	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
+	"github.com/tez-capital/tezbake/logging"
 	sshKey "github.com/tez-capital/tezbake/ssh"
 	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
 
 	"github.com/pkg/sftp"
-	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -279,7 +279,7 @@ func GetAppKeyPair(appDir string, rekey bool) *AppKeyPair {
 }
 
 func WriteRemoteLocator(appDir string, rc *RemoteConfiguration, rekey bool) *RemoteConfiguration {
-	log.Trace("Writing locator of '" + appDir + "' for '" + rc.InstancePath + "'...")
+	logging.Trace("Writing locator of '" + appDir + "' for '" + rc.InstancePath + "'...")
 	util.AssertEE(os.MkdirAll(appDir, os.ModePerm), "Failed to create node directory!", constants.ExitIOError)
 
 	bbKeyPair := GetAppKeyPair(appDir, rekey)
@@ -299,10 +299,10 @@ func WriteRemoteLocator(appDir string, rc *RemoteConfiguration, rekey bool) *Rem
 
 func WriteRemoteElevationCredentials(appDir string, config *RemoteConfiguration, credentials *RemoteElevateCredentials) {
 	if config.Elevate == REMOTE_ELEVATION_NONE {
-		log.Tracef("No elevation required for '%s', skipping saving elevate credentials", config.InstancePath)
+		logging.Tracef("No elevation required for '%s', skipping saving elevate credentials", config.InstancePath)
 		return
 	}
-	log.Trace("Writing elevation credentials of '" + appDir + "' for '" + config.InstancePath + "'...")
+	logging.Trace("Writing elevation credentials of '" + appDir + "' for '" + config.InstancePath + "'...")
 	serializedCredentials, err := json.MarshalIndent(credentials, "", "\t")
 	util.AssertEE(err, "Failed to serialize remote elevation credentials!", constants.ExitSerializationFailed)
 
@@ -368,7 +368,7 @@ func setupTezbakeForRemote(sshClient *ssh.Client, sftp *sftp.Client, locator *Re
 	switch {
 	case remoteCliSource != "":
 		bbCliForRemoteFile = remoteCliSource
-		log.Debugf("Using tezbake from '%s'", bbCliForRemoteFile)
+		logging.Debugf("Using tezbake from '%s'", bbCliForRemoteFile)
 	default:
 		// download tezbake for remote
 		architecture, err := getRemoteArchitecture(sshClient)
@@ -383,7 +383,7 @@ func setupTezbakeForRemote(sshClient *ssh.Client, sftp *sftp.Client, locator *Re
 			return
 		}
 
-		log.Trace(fmt.Sprintf("Downloading and installing tezbake (%s) for remote...", url))
+		logging.Tracef("Downloading and installing tezbake (%s) for remote...", url)
 		err = util.DownloadFile(url, bbCliForRemoteFile, false)
 		util.AssertE(err, "Failed to download tezbake for the remote!")
 	}
@@ -435,21 +435,21 @@ func SetupRemoteTezbake(appDir string, tagname string) {
 }
 
 func executePreparationStage(config *RemoteConfiguration, mode string, key []byte) {
-	log.Info("Preparing remote...")
+	logging.Info("Preparing remote...")
 	sshClient, sftp := system.OpenSshSession(config.ToSshConnectionDetails(), mode, key)
 	defer sshClient.Close()
 	defer sftp.Close()
 
 	setupTezbakeForRemote(sshClient, sftp, config, "latest")
 
-	log.Trace("Injecting ssh keys...")
+	logging.Trace("Injecting ssh keys...")
 	// read prepared pub key
 	pubKey, err := os.ReadFile(config.PublicKey)
 	util.AssertE(err, "Failed to locate public key!")
 	// write if necessary
 	result := system.RunSshCommand(sshClient, fmt.Sprintf("mkdir -p ~/.ssh; grep \"%s\" ~/.ssh/authorized_keys || echo \"%s\" >> ~/.ssh/authorized_keys", pubKey, pubKey), nil)
 	util.AssertE(result.Error, "Failed to inject BB public key!")
-	log.Info("Remote prepared!")
+	logging.Info("Remote prepared!")
 }
 
 func PrepareRemote(appDir string, config *RemoteConfiguration, auth string) error {
@@ -509,9 +509,9 @@ func (locator *RemoteConfiguration) OpenAppRemoteSession() (*TezbakeRemoteSessio
 }
 
 func runSshCommand(client *ssh.Client, cmd string, locator *RemoteConfiguration, fn func(*ssh.Client, string, *map[string]string) *system.SshCommandResult) *system.SshCommandResult {
-	log.Debug("Entering remote land...")
-	defer log.Debug("Returning to homeland...")
-	log.Debug("remote executing: " + cmd)
+	logging.Debug("Entering remote land...")
+	defer logging.Debug("Returning to homeland...")
+	logging.Debug("remote executing: " + cmd)
 	result := fn(client, cmd, nil)
 	if result.Error != nil && result.ExitCode == constants.ExitElevationRequired {
 		if locator.Elevate == REMOTE_ELEVATION_NONE {
@@ -596,14 +596,14 @@ func (session *TezbakeRemoteSession) ForwardAmiExecuteWithOutputChannel(workingD
 		return -1, err
 	}
 
-	log.Debug("Entering remote land...")
-	defer log.Debug("Returning to homeland...")
+	logging.Debug("Entering remote land...")
+	defer logging.Debug("Returning to homeland...")
 
 	client := session.sshClient
 	cmd := strings.Join(forwardArgs, " ")
 	locator := session.locator
 
-	log.Debug("remote executing: " + cmd)
+	logging.Debug("remote executing: " + cmd)
 
 	result := system.RunSshCommandWithOutputChannel(client, cmd, nil, outputChannel)
 	if result.Error != nil && result.ExitCode == constants.ExitElevationRequired {
