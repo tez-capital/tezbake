@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/tez-capital/tezbake/constants"
+	"github.com/tez-capital/tezbake/logging"
 )
 
 func resolveSecondaryKey(pkh string) (string, error) {
@@ -16,8 +16,8 @@ func resolveSecondaryKey(pkh string) (string, error) {
 	var bakers []struct {
 		Address string `json:"address"`
 	}
-	log.Infof("Checking if key %s is a secondary key...", pkh)
-	log.Debugf("Checking through %s...", url)
+	logging.Infof("Checking if key %s is a secondary key...", pkh)
+	logging.Debugf("Checking through %s...", url)
 
 	client := &http.Client{
 		Transport: &http.Transport{
@@ -51,8 +51,8 @@ func ResolveAttestationProfile(pkh string) (string, error) {
 	var delegate struct {
 		Active bool `json:"active"`
 	}
-	log.Infof("Checking if key %s is a delegate...", pkh)
-	log.Debugf("Checking through %s...", url)
+	logging.Infof("Checking if key %s is a delegate...", pkh)
+	logging.Debugf("Checking through %s...", url)
 	client := &http.Client{
 		Transport: &http.Transport{
 			DialContext: (&net.Dialer{
@@ -77,19 +77,19 @@ func ResolveAttestationProfile(pkh string) (string, error) {
 			err = json.NewDecoder(response.Body).Decode(&delegate)
 			switch {
 			case err != nil:
-				log.Warnf("Failed to decode response for key %s: %v", pkh, err)
+				logging.Warnf("Failed to decode response for key %s: %v", pkh, err)
 			case !delegate.Active:
-				log.Warnf("Key %s is not active", pkh)
+				logging.Warnf("Key %s is not active", pkh)
 			}
 		default:
-			log.Warnf("Failed to check whether key %s is a delegate: %s", pkh, response.Status)
+			logging.Warnf("Failed to check whether key %s is a delegate: %s", pkh, response.Status)
 		}
 		return pkh, nil
 	}
 
 	secondaryKeyOwner, err := resolveSecondaryKey(pkh)
 	if err == nil {
-		log.Infof("Key %s is a secondary key for delegate %s", pkh, secondaryKeyOwner)
+		logging.Infof("Key %s is a secondary key for delegate %s", pkh, secondaryKeyOwner)
 		return secondaryKeyOwner, nil
 	}
 
