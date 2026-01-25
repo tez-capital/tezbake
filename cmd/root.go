@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -55,8 +54,8 @@ Copyright © %d tez.capital
 			cli.JsonLogFormat = jsonFormat
 
 			slog.SetDefault(slog.New(handler))
-			slog.Log(context.Background(), logging.LevelTrace, "Log level set to '"+cli.LogLevel+"'")
-			slog.Log(context.Background(), logging.LevelTrace, formatLogMsg)
+			logging.Trace("Log level set to '" + cli.LogLevel + "'")
+			logging.Trace(formatLogMsg)
 
 			// init ami options
 			ami.SetOptions(ami.Options{

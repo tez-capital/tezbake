@@ -253,7 +253,7 @@ func appendAttrLines(b *strings.Builder, prefix string, attr slog.Attr) {
 
 	b.WriteString(key)
 	b.WriteByte('=')
-	b.WriteString(fmt.Sprint(slogValueAny(value)))
+	fmt.Fprint(b, slogValueAny(value))
 	b.WriteByte('\n')
 }
 
