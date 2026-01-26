@@ -42,7 +42,7 @@ var upgradeCmd = &cobra.Command{
 			exitCode, err := v.Upgrade(upgradeContext)
 			util.AssertEE(err, fmt.Sprintf("Failed to upgrade '%s'!", v.GetId()), exitCode)
 		}
-		log.Info("Upgrade succesful.")
+		log.Info("Upgrade successful.")
 	},
 }
 

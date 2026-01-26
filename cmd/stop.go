@@ -26,7 +26,7 @@ var stopCmd = &cobra.Command{
 			util.AssertEE(err, fmt.Sprintf("Failed to stop %s's services!", v.GetId()), exitCode)
 		}
 
-		log.Info("Requested services stopped succesfully")
+		log.Info("Requested services stopped successfully")
 	},
 }
 
