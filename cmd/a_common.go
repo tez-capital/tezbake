@@ -67,7 +67,7 @@ func GetAppsBySelectionCriteria(cmd *cobra.Command, criteria AppSelectionCriteri
 	var initialApps []base.BakeBuddyApp
 	switch criteria.InitialSelection {
 	case InstalledApps:
-		initialApps = apps.GetInstalledApps()
+		initialApps = apps.GetInstalledApps(cmd)
 	case AllApps:
 		initialApps = apps.All
 	}

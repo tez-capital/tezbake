@@ -45,7 +45,7 @@ var versionCmd = &cobra.Command{
 		}
 
 		if shouldPrintAll && len(appsToCollectFrom) == 0 {
-			appsToCollectFrom = apps.GetInstalledApps()
+			appsToCollectFrom = apps.GetInstalledApps(cmd)
 		}
 
 		versionTable := table.NewWriter()

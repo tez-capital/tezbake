@@ -34,7 +34,7 @@ var removeCmd = &cobra.Command{
 			FallbackSelection: AllFallback,
 		})
 
-		removingAllInstalled := lo.EveryBy(apps.GetInstalledApps(), func(installedApp base.BakeBuddyApp) bool {
+		removingAllInstalled := lo.EveryBy(apps.GetInstalledApps(cmd), func(installedApp base.BakeBuddyApp) bool {
 			return slices.Contains(selectedApps, installedApp)
 		})
 
