@@ -74,7 +74,7 @@ func Execute() error {
 func init() {
 	RootCmd.PersistentFlags().StringP("path", "p", constants.DefaultBBDirectory, "Path to bake buddy instance")
 	RootCmd.PersistentFlags().StringP("output-format", "o", "auto", "Sets output log format (json/text/auto)")
-	RootCmd.PersistentFlags().StringP("log-level", "l", "info", "Sets output log format (json/text/auto)")
+	RootCmd.PersistentFlags().StringP("log-level", "l", "info", "Sets log level (trace/debug/info/warn/error)")
 	RootCmd.PersistentFlags().Bool("version", false, "Prints tezbake version")
 	defaultHelpFunc := RootCmd.HelpFunc()
 	RootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
