@@ -19,7 +19,7 @@ func ExecuteRaw(args ...string) (int, error) {
 	eliArgs := make([]string, 0)
 	eliArgs = append(eliArgs, amiPath)
 	eliArgs = append(eliArgs, args...)
-	logging.Trace("Executing: " + eliPath + " " + strings.Join(eliArgs, " "))
+	logging.Tracef("Executing: %s %s", eliPath, strings.Join(eliArgs, " "))
 	eliProc := exec.Command(eliPath, eliArgs...)
 	eliProc.Stdout = os.Stdout
 	eliProc.Stderr = os.Stderr

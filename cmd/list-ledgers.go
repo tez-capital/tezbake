@@ -24,7 +24,7 @@ var listLedgersCmd = &cobra.Command{
 	Long:  "Collects and prits list of avaialble ledger ids.",
 	Run: func(cmd *cobra.Command, args []string) {
 		tezClientPath := path.Join(apps.Signer.GetPath(), "bin", "client")
-		logging.Trace("Executing: " + strings.Join([]string{tezClientPath, "list", "connected", "ledgers"}, " "))
+		logging.Tracef("Executing: %s", strings.Join([]string{tezClientPath, "list", "connected", "ledgers"}, " "))
 		output, err := exec.Command(tezClientPath, "list", "connected", "ledgers").CombinedOutput()
 		if matched, _ := regexp.Match("Error:", output); err != nil || matched {
 			fmt.Println(string(output))

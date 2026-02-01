@@ -24,7 +24,7 @@ func findAppDefinitionRemote(sftpClient *sftp.Client, workingDir string) (map[st
 		appDefPath := path.Join(workingDir, candidate)
 		appDefFile, err := sftpClient.OpenFile(appDefPath, os.O_RDONLY)
 		if err == nil {
-			logging.Trace("App definition found in " + appDefPath)
+			logging.Tracef("App definition found in %s", appDefPath)
 			appDef := make(map[string]any)
 			appDefContent, err := io.ReadAll(appDefFile)
 			if err != nil {
@@ -56,7 +56,7 @@ func FindAppDefinition(workingDir string) (map[string]any, string, error) {
 		appDefPath := path.Join(workingDir, candidate)
 		appDefContent, err := os.ReadFile(appDefPath)
 		if err == nil {
-			logging.Trace("App definition found in " + appDefPath)
+			logging.Tracef("App definition found in %s", appDefPath)
 			appDef := make(map[string]any)
 			err = hjson.Unmarshal(appDefContent, &appDef)
 			return appDef, appDefPath, err
@@ -66,7 +66,7 @@ func FindAppDefinition(workingDir string) (map[string]any, string, error) {
 }
 
 func LoadAppDefinition(app string) (map[string]any, error) {
-	logging.Trace("Loading '" + app + "' definition from...")
+	logging.Tracef("Loading '%s' definition from...", app)
 	appDef, _, err := FindAppDefinition(app)
 	if err != nil {
 		return nil, err

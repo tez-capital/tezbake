@@ -279,7 +279,7 @@ func GetAppKeyPair(appDir string, rekey bool) *AppKeyPair {
 }
 
 func WriteRemoteLocator(appDir string, rc *RemoteConfiguration, rekey bool) *RemoteConfiguration {
-	logging.Trace("Writing locator of '" + appDir + "' for '" + rc.InstancePath + "'...")
+	logging.Tracef("Writing locator of '%s' for '%s'...", appDir, rc.InstancePath)
 	util.AssertEE(os.MkdirAll(appDir, os.ModePerm), "Failed to create node directory!", constants.ExitIOError)
 
 	bbKeyPair := GetAppKeyPair(appDir, rekey)
@@ -302,7 +302,7 @@ func WriteRemoteElevationCredentials(appDir string, config *RemoteConfiguration,
 		logging.Tracef("No elevation required for '%s', skipping saving elevate credentials", config.InstancePath)
 		return
 	}
-	logging.Trace("Writing elevation credentials of '" + appDir + "' for '" + config.InstancePath + "'...")
+	logging.Tracef("Writing elevation credentials of '%s' for '%s'...", appDir, config.InstancePath)
 	serializedCredentials, err := json.MarshalIndent(credentials, "", "\t")
 	util.AssertEE(err, "Failed to serialize remote elevation credentials!", constants.ExitSerializationFailed)
 
@@ -511,7 +511,7 @@ func (locator *RemoteConfiguration) OpenAppRemoteSession() (*TezbakeRemoteSessio
 func runSshCommand(client *ssh.Client, cmd string, locator *RemoteConfiguration, fn func(*ssh.Client, string, *map[string]string) *system.SshCommandResult) *system.SshCommandResult {
 	logging.Debug("Entering remote land...")
 	defer logging.Debug("Returning to homeland...")
-	logging.Debug("remote executing: " + cmd)
+	logging.Debugf("remote executing: %s", cmd)
 	result := fn(client, cmd, nil)
 	if result.Error != nil && result.ExitCode == constants.ExitElevationRequired {
 		if locator.Elevate == REMOTE_ELEVATION_NONE {
@@ -603,7 +603,7 @@ func (session *TezbakeRemoteSession) ForwardAmiExecuteWithOutputChannel(workingD
 	cmd := strings.Join(forwardArgs, " ")
 	locator := session.locator
 
-	logging.Debug("remote executing: " + cmd)
+	logging.Debugf("remote executing: %s", cmd)
 
 	result := system.RunSshCommandWithOutputChannel(client, cmd, nil, outputChannel)
 	if result.Error != nil && result.ExitCode == constants.ExitElevationRequired {

@@ -54,7 +54,7 @@ Copyright © %d tez.capital
 			cli.JsonLogFormat = jsonFormat
 
 			slog.SetDefault(slog.New(handler))
-			logging.Trace("Log level set to '" + cli.LogLevel + "'")
+			logging.Tracef("Log level set to '%s'", cli.LogLevel)
 			logging.Trace(formatLogMsg)
 
 			// init ami options
