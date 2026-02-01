@@ -58,19 +58,60 @@ func isPipe(file *os.File) bool {
 	return (info.Mode() & os.ModeCharDevice) == 0
 }
 
+func isTerminalWriter(writer io.Writer) bool {
+	if file, ok := writer.(*os.File); ok {
+		return !isPipe(file)
+	}
+	return false
+}
+
+const (
+	colorReset   = "\033[0m"
+	colorMagenta = "\033[35m"
+	colorBlue    = "\033[34m"
+	colorYellow  = "\033[33m"
+	colorRed     = "\033[31m"
+	colorCyan    = "\033[36m"
+	colorWhite   = "\033[37m"
+)
+
+func colorize(value string, color string, enabled bool) string {
+	if !enabled || color == "" {
+		return value
+	}
+	return color + value + colorReset
+}
+
+func levelColor(level slog.Level) string {
+	switch {
+	case level < slog.LevelDebug:
+		return colorCyan
+	case level < slog.LevelInfo:
+		return colorMagenta
+	case level < slog.LevelWarn:
+		return colorBlue
+	case level < slog.LevelError:
+		return colorYellow
+	default:
+		return colorRed
+	}
+}
+
 type textHandler struct {
-	mu     *sync.Mutex
-	out    io.Writer
-	level  slog.Level
-	attrs  []slog.Attr
-	groups []string
+	mu      *sync.Mutex
+	out     io.Writer
+	level   slog.Level
+	attrs   []slog.Attr
+	groups  []string
+	noColor bool
 }
 
 func newTextHandler(out io.Writer, level slog.Level) *textHandler {
 	return &textHandler{
-		mu:    &sync.Mutex{},
-		out:   out,
-		level: level,
+		mu:      &sync.Mutex{},
+		out:     out,
+		level:   level,
+		noColor: !isTerminalWriter(out),
 	}
 }
 
@@ -86,7 +127,7 @@ func (h *textHandler) Handle(ctx context.Context, record slog.Record) error {
 	var b strings.Builder
 	b.WriteString(record.Time.Format("15:04:05"))
 	b.WriteString(" [")
-	b.WriteString(strings.ToUpper(levelName(record.Level)))
+	b.WriteString(colorize(strings.ToUpper(levelName(record.Level)), levelColor(record.Level), !h.noColor))
 	b.WriteString("] (tezbake) ")
 	b.WriteString(record.Message)
 	b.WriteByte('\n')
@@ -104,7 +145,7 @@ func (h *textHandler) Handle(ctx context.Context, record slog.Record) error {
 	}
 
 	for _, attr := range attrs {
-		appendAttrLines(&b, prefix, attr)
+		appendAttrLines(&b, prefix, attr, !h.noColor)
 	}
 
 	h.mu.Lock()
@@ -240,20 +281,19 @@ func slogValueAny(value slog.Value) any {
 	}
 }
 
-func appendAttrLines(b *strings.Builder, prefix string, attr slog.Attr) {
+func appendAttrLines(b *strings.Builder, prefix string, attr slog.Attr, color bool) {
 	value := attr.Value.Resolve()
 	key := prefix + attr.Key
 	if value.Kind() == slog.KindGroup {
 		groupPrefix := key + "."
 		for _, groupAttr := range value.Group() {
-			appendAttrLines(b, groupPrefix, groupAttr)
+			appendAttrLines(b, groupPrefix, groupAttr, color)
 		}
 		return
 	}
 
-	b.WriteString(key)
-	b.WriteByte('=')
-	fmt.Fprint(b, slogValueAny(value))
+	line := key + "=" + fmt.Sprint(slogValueAny(value))
+	b.WriteString(colorize(line, colorWhite, color))
 	b.WriteByte('\n')
 }
 
