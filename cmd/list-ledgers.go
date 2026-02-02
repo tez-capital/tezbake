@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
-	"strings"
 
 	"github.com/tez-capital/tezbake/apps"
 	"github.com/tez-capital/tezbake/cli"
@@ -24,7 +23,7 @@ var listLedgersCmd = &cobra.Command{
 	Long:  "Collects and prits list of avaialble ledger ids.",
 	Run: func(cmd *cobra.Command, args []string) {
 		tezClientPath := path.Join(apps.Signer.GetPath(), "bin", "client")
-		logging.Tracef("Executing: %s", strings.Join([]string{tezClientPath, "list", "connected", "ledgers"}, " "))
+		logging.Trace("Listing connected ledgers:", "tezClientPath", tezClientPath)
 		output, err := exec.Command(tezClientPath, "list", "connected", "ledgers").CombinedOutput()
 		if matched, _ := regexp.Match("Error:", output); err != nil || matched {
 			fmt.Println(string(output))

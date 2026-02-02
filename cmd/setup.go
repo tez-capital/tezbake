@@ -71,7 +71,7 @@ var setupCmd = &cobra.Command{
 			// extract last segment and use it as id if it does not contain whitespace
 			id = filepath.Base(cli.BBdir)
 			if strings.Contains(id, " ") {
-				logging.Errorf("Please specify id for baker. 'bb-default' id is allowed only for bake buddy installed in '%s' path! The inferred id '%s' contains whitespace.", constants.DefaultBBDirectory, id)
+				logging.Error("Please specify id for baker. 'bb-default' id is allowed only for bake buddy installed in default path! The inferred id contains whitespace.", "defaultPath", constants.DefaultBBDirectory, "id", id)
 				os.Exit(constants.ExitInvalidId)
 			}
 		}
@@ -127,7 +127,7 @@ var setupCmd = &cobra.Command{
 				isUserConfirmed := false
 				if system.IsTty() {
 					if ctx.Remote != "" && !v.IsRemoteApp() {
-						logging.Errorf("You have already installed %s locally. Please remove it first!", v.GetId())
+						logging.Error("You have already installed this app locally. Please remove it first!", "app", v.GetId())
 						os.Exit(constants.ExitNotSupported)
 					}
 
@@ -153,7 +153,7 @@ var setupCmd = &cobra.Command{
 					isUserConfirmed = util.Confirm("DAL_NODE is set in node definition but no dal node found. Do you want to remove it?", false, "Failed to confirm DAL_NODE removal!")
 				}
 				if isUserConfirmed {
-					logging.Infof("Removing dal node endpoint from node definition")
+					logging.Info("Removing dal node endpoint from node definition")
 					apps.Node.UpdateDalEndpoint("")
 				}
 			}
@@ -193,7 +193,7 @@ var setupCmd = &cobra.Command{
 					isUserConfirmed = util.Confirm(fmt.Sprintf("DAL - node endpoint '%s' is different from actual node endpoint '%s'. Do you want to update the DAL - node endpoint to match the actual node endpoint?", dalNodeEndpoint, nodeEndpoint), false, "Failed to confirm DAL node endpoint update!")
 				}
 				if isUserConfirmed {
-					logging.Infof("Updating dal node endpoint to '%s'", nodeEndpoint)
+					logging.Info("Updating dal node endpoint", "nodeEndpoint", nodeEndpoint)
 					util.AssertEE(apps.DalNode.UpdateNodeEndpoint(nodeEndpoint), "Failed to update dal node endpoint!", constants.ExitInternalError)
 					exitCode, err := apps.DalNode.Execute("setup", "--configure") // reconfigure to apply changes
 					util.AssertEE(err, "Failed to reconfigure dal node!", exitCode)
@@ -206,7 +206,7 @@ var setupCmd = &cobra.Command{
 					isUserConfirmed = util.Confirm(fmt.Sprintf("NODE - dal endpoint '%s' is different from actual dal endpoint '%s'. Do you want to update the NODE - dal endpoint to match the actual dal endpoint?", nodeDalEndpoint, dalEndpoint), false, "Failed to confirm node dal endpoint update!")
 				}
 				if isUserConfirmed {
-					logging.Infof("Updating node dal endpoint to '%s'", dalEndpoint)
+					logging.Info("Updating node dal endpoint", "dalEndpoint", dalEndpoint)
 					util.AssertEE(apps.Node.UpdateDalEndpoint(dalEndpoint), "Failed to update dal node endpoint!", constants.ExitInternalError)
 					exitCode, err := apps.Node.Execute("setup", "--configure") // reconfigure to apply changes
 					util.AssertEE(err, "Failed to reconfigure node!", exitCode)

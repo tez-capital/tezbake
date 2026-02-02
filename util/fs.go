@@ -32,7 +32,7 @@ func ChownRS(username string, targetPath string) (int, error) {
 			if err == nil {
 				err = os.Chown(path, uid, gid)
 				if err != nil {
-					logging.Warnf("Failed to change ownership of '%s' (%s)!", path, err.Error())
+					logging.Warn("Failed to change ownership:", "path", path, "error", err.Error())
 				}
 			}
 			return err

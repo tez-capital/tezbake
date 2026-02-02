@@ -62,7 +62,7 @@ func (app *Node) GetUser() string {
 
 	def, _, err := base.LoadAppDefinition(app)
 	if err != nil {
-		logging.Warnf("Failed to load %s definition (%s)!", app.GetId(), err.Error())
+		logging.Warn("Failed to load definition:", "app", app.GetId(), "error", err.Error())
 		return ""
 	}
 	if user, ok := def["user"].(string); ok {

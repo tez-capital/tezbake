@@ -42,7 +42,7 @@ var infoCmd = &cobra.Command{
 				}
 			}
 
-			logging.Debugf("Collecting info for %s", v.GetId())
+			logging.Debug("Collecting info for:", "app", v.GetId())
 			optionsJson, _ := json.Marshal(options)
 			if cli.JsonLogFormat {
 				result[v.GetId()], _ = v.GetInfo(optionsJson)

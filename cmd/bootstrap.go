@@ -318,7 +318,7 @@ func runSnapshotSelector(nodePath string) snapshotSelection {
 	model := newBootstrapModel(nodePath)
 	result, err := tea.NewProgram(model, tea.WithInput(os.Stdin), tea.WithOutput(os.Stdout)).Run()
 	if err != nil {
-		logging.Errorf("Error running snapshot selector: %v", err)
+		logging.Error("Error running snapshot selector:", "error", err)
 		return snapshotSelection{canceled: true}
 	}
 
@@ -390,11 +390,11 @@ to help you choose the appropriate snapshot for your needs.`,
 		}
 
 		if nodePath != "" {
-			logging.Infof("Bootstrapping node at: %s", nodePath)
+			logging.Info("Bootstrapping node at:", "nodePath", nodePath)
 		}
-		logging.Infof("Bootstrapping from: %s", snapshotSource)
+		logging.Info("Bootstrapping from:", "snapshotSource", snapshotSource)
 		if blockHash != "" {
-			logging.Infof("Block hash: %s", blockHash)
+			logging.Info("Block hash:", "hash", blockHash)
 		}
 		if disableSnapshotCheck {
 			logging.Warn("Snapshot integrity verification disabled")

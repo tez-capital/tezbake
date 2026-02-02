@@ -57,7 +57,7 @@ func EraseCache() (int, error) {
 	eliArgs = append(eliArgs, amiPath)
 	eliArgs = append(eliArgs, options.ToAmiArgs()...)
 	eliArgs = append(eliArgs, "--erase-cache")
-	logging.Tracef("Executing: %s %s", eliPath, strings.Join(eliArgs, " "))
+	logging.Trace("Executing:", "eliPath", eliPath, "eliArgs", strings.Join(eliArgs, " "))
 	eliProc := exec.Command(eliPath, eliArgs...)
 	eliProc.Stdout = os.Stdout
 	eliProc.Stderr = os.Stderr
