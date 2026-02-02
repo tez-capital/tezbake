@@ -10,7 +10,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/fatih/color"
 	"github.com/tez-capital/tezbake/constants"
 )
 
@@ -35,8 +34,54 @@ func isHiddenAttr(attr slog.Attr) bool {
 	return found
 }
 
+const (
+	colorReset   = "\033[0m"
+	colorMagenta = "\033[35m"
+	colorBlue    = "\033[34m"
+	colorYellow  = "\033[33m"
+	colorRed     = "\033[31m"
+	colorCyan    = "\033[36m"
+	colorWhite   = "\033[37m"
+)
+
+func colorize(value string, color string, enabled bool) string {
+	if !enabled || color == "" {
+		return value
+	}
+	return color + value + colorReset
+}
+
+func levelColor(level slog.Level) string {
+	switch {
+	case level < slog.LevelDebug:
+		return colorCyan
+	case level < slog.LevelInfo:
+		return colorMagenta
+	case level < slog.LevelWarn:
+		return colorBlue
+	case level < slog.LevelError:
+		return colorYellow
+	default:
+		return colorRed
+	}
+}
+
+func levelName(level slog.Level) string {
+	switch {
+	case level < slog.LevelDebug:
+		return "TRACE"
+	case level < slog.LevelInfo:
+		return "DEBUG"
+	case level < slog.LevelWarn:
+		return "INFO"
+	case level < slog.LevelError:
+		return "WARNING"
+	default:
+		return "ERROR"
+	}
+}
+
 func (h *PrettyTextLogHandler) Handle(ctx context.Context, r slog.Record) error {
-	level := r.Level.String() + ":"
 	fields := make(map[string]any, r.NumAttrs())
 
 	for groupId, group := range h.attrs {
@@ -80,26 +125,19 @@ func (h *PrettyTextLogHandler) Handle(ctx context.Context, r slog.Record) error 
 		}
 	}
 
-	timeStr := r.Time.Format("[15:04:05.000]")
 	fieldsSerialized := string(fieldsSerializedRaw)
 	if !h.noColor {
-		fieldsSerialized = color.WhiteString(fieldsSerialized)
-
-		switch r.Level {
-		case levelTrace:
-			level = color.CyanString(level)
-		case slog.LevelDebug:
-			level = color.MagentaString(level)
-		case slog.LevelInfo:
-			level = color.BlueString(level)
-		case slog.LevelWarn:
-			level = color.YellowString(level)
-		case slog.LevelError:
-			level = color.RedString(level)
-		}
+		fieldsSerialized = colorize(fieldsSerialized, colorWhite, true)
 	}
 
-	h.l.Println(timeStr, level, r.Message, fieldsSerialized)
+	var b strings.Builder
+	b.WriteString(r.Time.Format("15:04:05"))
+	b.WriteString(" [")
+	b.WriteString(colorize(strings.ToUpper(levelName(r.Level)), levelColor(r.Level), !h.noColor))
+	b.WriteString("] (tezbake) ")
+	b.WriteString(r.Message)
+
+	h.l.Println(&b, fieldsSerialized)
 
 	return nil
 }
