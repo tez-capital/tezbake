@@ -3,21 +3,218 @@ package logging
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
+	"log"
 	"log/slog"
-	"os"
-	"strconv"
+	"maps"
+	"slices"
 	"strings"
-	"sync"
+
+	"github.com/fatih/color"
+	"github.com/tez-capital/tezbake/constants"
 )
 
-const LevelTrace slog.Level = -8
+const levelTrace slog.Level = -8
+
+type PrettyHandlerOptions struct {
+	slog.HandlerOptions
+	NoColor bool
+}
+
+type PrettyTextLogHandler struct {
+	slog.Handler
+	l *log.Logger
+
+	attrs   map[string][]slog.Attr
+	groups  []string
+	noColor bool
+}
+
+func isHiddenAttr(attr slog.Attr) bool {
+	_, found := slices.BinarySearch(constants.LOG_TOP_LEVEL_HIDDEN_FIELDS, attr.Key)
+	return found
+}
+
+func (h *PrettyTextLogHandler) Handle(ctx context.Context, r slog.Record) error {
+	level := r.Level.String() + ":"
+	fields := make(map[string]any, r.NumAttrs())
+
+	for groupId, group := range h.attrs {
+		for _, attr := range group {
+			if groupId == "" {
+				if isHiddenAttr(attr) {
+					delete(fields, attr.Key)
+					continue
+				}
+				fields[attr.Key] = attr.Value.Any()
+			} else {
+				if m, ok := fields[groupId].(map[string]any); ok {
+					m[attr.Key] = attr.Value.Any()
+				} else {
+					fields[groupId] = map[string]any{
+						attr.Key: attr.Value.Any(),
+					}
+				}
+			}
+		}
+	}
+
+	r.Attrs(func(a slog.Attr) bool {
+		if !isHiddenAttr(a) {
+			switch {
+			case a.Key == "error" && a.Value.String() != "":
+				fields[a.Key] = strings.Split(a.Value.String(), "\n")
+			default:
+				fields[a.Key] = a.Value.Any()
+			}
+		}
+		return true
+	})
+
+	var fieldsSerializedRaw []byte
+	if len(fields) != 0 {
+		var err error
+		fieldsSerializedRaw, err = json.MarshalIndent(fields, "", "  ")
+		if err != nil {
+			slog.Error("failed to serialize fields", "error", err.Error())
+		}
+	}
+
+	timeStr := r.Time.Format("[15:04:05.000]")
+	fieldsSerialized := string(fieldsSerializedRaw)
+	if !h.noColor {
+		fieldsSerialized = color.WhiteString(fieldsSerialized)
+
+		switch r.Level {
+		case levelTrace:
+			level = color.CyanString(level)
+		case slog.LevelDebug:
+			level = color.MagentaString(level)
+		case slog.LevelInfo:
+			level = color.BlueString(level)
+		case slog.LevelWarn:
+			level = color.YellowString(level)
+		case slog.LevelError:
+			level = color.RedString(level)
+		}
+	}
+
+	h.l.Println(timeStr, level, r.Message, fieldsSerialized)
+
+	return nil
+}
+
+func (h *PrettyTextLogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	newAttrs := maps.Clone(h.attrs)
+	groupId := ""
+	if len(h.groups) != 0 {
+		groupId = h.groups[len(h.groups)-1]
+	}
+	newAttrs[groupId] = append(newAttrs[groupId], attrs...)
+
+	return &PrettyTextLogHandler{
+		Handler: h.Handler.WithAttrs(attrs),
+		l:       h.l,
+		attrs:   newAttrs,
+		groups:  slices.Clone(h.groups),
+		noColor: h.noColor,
+	}
+}
+
+func (h *PrettyTextLogHandler) WithGroup(name string) slog.Handler {
+	return &PrettyTextLogHandler{
+		Handler: h.Handler.WithGroup(name),
+		l:       h.l,
+		attrs:   maps.Clone(h.attrs),
+		groups:  append(h.groups, name),
+		noColor: h.noColor,
+	}
+}
+
+func NewPrettyTextLogHandler(
+	out io.Writer,
+	opts PrettyHandlerOptions,
+) *PrettyTextLogHandler {
+	h := &PrettyTextLogHandler{
+		Handler: slog.NewJSONHandler(out, &opts.HandlerOptions),
+		l:       log.New(out, "", 0),
+		attrs:   make(map[string][]slog.Attr),
+		noColor: opts.NoColor,
+	}
+
+	return h
+}
+
+type MultiWriter struct {
+	writers []io.Writer
+}
+
+func (m *MultiWriter) Write(p []byte) (n int, err error) {
+	for _, w := range m.writers {
+		n, err = w.Write(p)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func NewMultiWriter(writers ...io.Writer) *MultiWriter {
+	return &MultiWriter{
+		writers: writers,
+	}
+}
+
+type SlogMultiHandler struct {
+	handlers []slog.Handler
+}
+
+func NewSlogMultiHandler(handlers ...slog.Handler) *SlogMultiHandler {
+	return &SlogMultiHandler{
+		handlers: handlers,
+	}
+}
+
+func (h *SlogMultiHandler) Handle(ctx context.Context, r slog.Record) error {
+	for _, handler := range h.handlers {
+		if !handler.Enabled(ctx, r.Level) {
+			continue
+		}
+		if err := handler.Handle(ctx, r); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (h *SlogMultiHandler) Enabled(_ context.Context, level slog.Level) bool {
+	return true
+}
+
+func (h *SlogMultiHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	newHandlers := make([]slog.Handler, 0, len(h.handlers))
+	for _, handler := range h.handlers {
+		newHandlers = append(newHandlers, handler.WithAttrs(attrs))
+	}
+	return &SlogMultiHandler{
+		handlers: newHandlers,
+	}
+}
+
+func (h *SlogMultiHandler) WithGroup(name string) slog.Handler {
+	newHandlers := make([]slog.Handler, 0, len(h.handlers))
+	for _, handler := range h.handlers {
+		newHandlers = append(newHandlers, handler.WithGroup(name))
+	}
+	return &SlogMultiHandler{
+		handlers: newHandlers,
+	}
+}
 
 func ParseLevel(levelFlag string) (slog.Level, string) {
 	switch strings.ToLower(levelFlag) {
 	case "trace":
-		return LevelTrace, "trace"
+		return levelTrace, "trace"
 	case "debug":
 		return slog.LevelDebug, "debug"
 	case "warn", "warning":
@@ -27,286 +224,4 @@ func ParseLevel(levelFlag string) (slog.Level, string) {
 	default:
 		return slog.LevelInfo, "info"
 	}
-}
-
-func NewHandler(format string, level slog.Level, stdout *os.File, out io.Writer) (slog.Handler, bool, string) {
-	if out == nil {
-		out = io.Discard
-	}
-
-	switch format {
-	case "json":
-		return newJSONHandler(out, level), true, "Output format set to 'json'"
-	case "text":
-		return newTextHandler(out, level), false, "Output format set to 'text'"
-	default:
-		if isPipe(stdout) {
-			return newJSONHandler(out, level), true, "Output format automatically set to 'json'"
-		}
-		return newTextHandler(out, level), false, "Output format automatically set to 'text'"
-	}
-}
-
-func isPipe(file *os.File) bool {
-	if file == nil {
-		return false
-	}
-	info, err := file.Stat()
-	if err != nil {
-		return false
-	}
-	return (info.Mode() & os.ModeCharDevice) == 0
-}
-
-func isTerminalWriter(writer io.Writer) bool {
-	if file, ok := writer.(*os.File); ok {
-		return !isPipe(file)
-	}
-	return false
-}
-
-const (
-	colorReset   = "\033[0m"
-	colorMagenta = "\033[35m"
-	colorBlue    = "\033[34m"
-	colorYellow  = "\033[33m"
-	colorRed     = "\033[31m"
-	colorCyan    = "\033[36m"
-	colorWhite   = "\033[37m"
-)
-
-func colorize(value string, color string, enabled bool) string {
-	if !enabled || color == "" {
-		return value
-	}
-	return color + value + colorReset
-}
-
-func levelColor(level slog.Level) string {
-	switch {
-	case level < slog.LevelDebug:
-		return colorCyan
-	case level < slog.LevelInfo:
-		return colorMagenta
-	case level < slog.LevelWarn:
-		return colorBlue
-	case level < slog.LevelError:
-		return colorYellow
-	default:
-		return colorRed
-	}
-}
-
-type textHandler struct {
-	mu      *sync.Mutex
-	out     io.Writer
-	level   slog.Level
-	attrs   []slog.Attr
-	groups  []string
-	noColor bool
-}
-
-func newTextHandler(out io.Writer, level slog.Level) *textHandler {
-	return &textHandler{
-		mu:      &sync.Mutex{},
-		out:     out,
-		level:   level,
-		noColor: !isTerminalWriter(out),
-	}
-}
-
-func (h *textHandler) Enabled(_ context.Context, level slog.Level) bool {
-	return level >= h.level
-}
-
-func (h *textHandler) Handle(ctx context.Context, record slog.Record) error {
-	if !h.Enabled(ctx, record.Level) {
-		return nil
-	}
-
-	var b strings.Builder
-	b.WriteString(record.Time.Format("15:04:05"))
-	b.WriteString(" [")
-	b.WriteString(colorize(strings.ToUpper(levelName(record.Level)), levelColor(record.Level), !h.noColor))
-	b.WriteString("] (tezbake) ")
-	b.WriteString(record.Message)
-	b.WriteByte('\n')
-
-	attrs := make([]slog.Attr, 0, len(h.attrs)+record.NumAttrs())
-	attrs = append(attrs, h.attrs...)
-	record.Attrs(func(attr slog.Attr) bool {
-		attrs = append(attrs, attr)
-		return true
-	})
-
-	prefix := ""
-	if len(h.groups) > 0 {
-		prefix = strings.Join(h.groups, ".") + "."
-	}
-
-	for _, attr := range attrs {
-		appendAttrLines(&b, prefix, attr, !h.noColor)
-	}
-
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	_, err := io.WriteString(h.out, b.String())
-	return err
-}
-
-func (h *textHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	clone := *h
-	clone.attrs = append(append([]slog.Attr{}, h.attrs...), attrs...)
-	return &clone
-}
-
-func (h *textHandler) WithGroup(name string) slog.Handler {
-	clone := *h
-	clone.groups = append(append([]string{}, h.groups...), name)
-	return &clone
-}
-
-type jsonHandler struct {
-	mu     *sync.Mutex
-	out    io.Writer
-	level  slog.Level
-	attrs  []slog.Attr
-	groups []string
-}
-
-func newJSONHandler(out io.Writer, level slog.Level) *jsonHandler {
-	return &jsonHandler{
-		mu:    &sync.Mutex{},
-		out:   out,
-		level: level,
-	}
-}
-
-func (h *jsonHandler) Enabled(_ context.Context, level slog.Level) bool {
-	return level >= h.level
-}
-
-func (h *jsonHandler) Handle(ctx context.Context, record slog.Record) error {
-	if !h.Enabled(ctx, record.Level) {
-		return nil
-	}
-
-	payload := map[string]any{
-		"level":     levelName(record.Level),
-		"msg":       record.Message,
-		"timestamp": strconv.FormatInt(record.Time.Unix(), 10),
-		"module":    "tezbake",
-	}
-
-	attrs := make([]slog.Attr, 0, len(h.attrs)+record.NumAttrs())
-	attrs = append(attrs, h.attrs...)
-	record.Attrs(func(attr slog.Attr) bool {
-		attrs = append(attrs, attr)
-		return true
-	})
-
-	prefix := ""
-	if len(h.groups) > 0 {
-		prefix = strings.Join(h.groups, ".") + "."
-	}
-
-	for _, attr := range attrs {
-		appendAttrMap(payload, prefix, attr)
-	}
-
-	data, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-	data = append(data, byte('\n'))
-
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	_, err = h.out.Write(data)
-	return err
-}
-
-func (h *jsonHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	clone := *h
-	clone.attrs = append(append([]slog.Attr{}, h.attrs...), attrs...)
-	return &clone
-}
-
-func (h *jsonHandler) WithGroup(name string) slog.Handler {
-	clone := *h
-	clone.groups = append(append([]string{}, h.groups...), name)
-	return &clone
-}
-
-func levelName(level slog.Level) string {
-	switch {
-	case level < slog.LevelDebug:
-		return "trace"
-	case level < slog.LevelInfo:
-		return "debug"
-	case level < slog.LevelWarn:
-		return "info"
-	case level < slog.LevelError:
-		return "warning"
-	default:
-		return "error"
-	}
-}
-
-func slogValueAny(value slog.Value) any {
-	switch value.Kind() {
-	case slog.KindAny:
-		if err, ok := value.Any().(error); ok {
-			return err.Error()
-		}
-		return value.Any()
-	case slog.KindBool:
-		return value.Bool()
-	case slog.KindDuration:
-		return value.Duration()
-	case slog.KindFloat64:
-		return value.Float64()
-	case slog.KindInt64:
-		return value.Int64()
-	case slog.KindString:
-		return value.String()
-	case slog.KindTime:
-		return value.Time()
-	case slog.KindUint64:
-		return value.Uint64()
-	default:
-		return value.Any()
-	}
-}
-
-func appendAttrLines(b *strings.Builder, prefix string, attr slog.Attr, color bool) {
-	value := attr.Value.Resolve()
-	key := prefix + attr.Key
-	if value.Kind() == slog.KindGroup {
-		groupPrefix := key + "."
-		for _, groupAttr := range value.Group() {
-			appendAttrLines(b, groupPrefix, groupAttr, color)
-		}
-		return
-	}
-
-	line := key + "=" + fmt.Sprint(slogValueAny(value))
-	b.WriteString(colorize(line, colorWhite, color))
-	b.WriteByte('\n')
-}
-
-func appendAttrMap(dst map[string]any, prefix string, attr slog.Attr) {
-	value := attr.Value.Resolve()
-	key := prefix + attr.Key
-	if value.Kind() == slog.KindGroup {
-		groupPrefix := key + "."
-		for _, groupAttr := range value.Group() {
-			appendAttrMap(dst, groupPrefix, groupAttr)
-		}
-		return
-	}
-
-	dst[key] = slogValueAny(value)
 }

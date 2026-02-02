@@ -104,7 +104,6 @@ func (app *Node) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 	}
 
 	if app.IsRemoteApp() {
-		fmt.Println("------------> wtf wtf wtf <------------")
 		// we need to set permissions for remote apps
 		// while apps set their permissions automatically during setup
 		// remote apps need to set permissions manually as setup is run on remote

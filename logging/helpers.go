@@ -7,11 +7,11 @@ import (
 )
 
 func Trace(msg string, args ...any) {
-	slog.Log(context.Background(), LevelTrace, msg, args...)
+	slog.Log(context.Background(), levelTrace, msg, args...)
 }
 
 func Tracef(format string, args ...any) {
-	slog.Log(context.Background(), LevelTrace, fmt.Sprintf(format, args...))
+	slog.Log(context.Background(), levelTrace, fmt.Sprintf(format, args...))
 }
 
 func Debug(msg string, args ...any) {
