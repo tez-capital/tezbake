@@ -279,7 +279,7 @@ func GetAppKeyPair(appDir string, rekey bool) *AppKeyPair {
 }
 
 func WriteRemoteLocator(appDir string, rc *RemoteConfiguration, rekey bool) *RemoteConfiguration {
-	logging.Trace("Writing locator...", "appDir", appDir, "InstancePath", rc.InstancePath)
+	logging.Trace("Writing locator...", "app_dir", appDir, "instance_path", rc.InstancePath)
 	util.AssertEE(os.MkdirAll(appDir, os.ModePerm), "Failed to create node directory!", constants.ExitIOError)
 
 	bbKeyPair := GetAppKeyPair(appDir, rekey)
@@ -299,10 +299,10 @@ func WriteRemoteLocator(appDir string, rc *RemoteConfiguration, rekey bool) *Rem
 
 func WriteRemoteElevationCredentials(appDir string, config *RemoteConfiguration, credentials *RemoteElevateCredentials) {
 	if config.Elevate == REMOTE_ELEVATION_NONE {
-		logging.Trace("No elevation required, skipping saving elevate credentials", "InstancePath", config.InstancePath)
+		logging.Trace("No elevation required, skipping saving elevate credentials", "instance_path", config.InstancePath)
 		return
 	}
-	logging.Trace("Writing elevation credentials...", "appDir", appDir, "InstancePath", config.InstancePath)
+	logging.Trace("Writing elevation credentials...", "app_dir", appDir, "instance_path", config.InstancePath)
 	serializedCredentials, err := json.MarshalIndent(credentials, "", "\t")
 	util.AssertEE(err, "Failed to serialize remote elevation credentials!", constants.ExitSerializationFailed)
 
@@ -368,7 +368,7 @@ func setupTezbakeForRemote(sshClient *ssh.Client, sftp *sftp.Client, locator *Re
 	switch {
 	case remoteCliSource != "":
 		bbCliForRemoteFile = remoteCliSource
-		logging.Debug("Using tezbake from", "RemoteFile", bbCliForRemoteFile)
+		logging.Debug("Using tezbake from", "remote_file", bbCliForRemoteFile)
 	default:
 		// download tezbake for remote
 		architecture, err := getRemoteArchitecture(sshClient)
@@ -383,7 +383,7 @@ func setupTezbakeForRemote(sshClient *ssh.Client, sftp *sftp.Client, locator *Re
 			return
 		}
 
-		logging.Trace("Downloading and installing tezbake (%s) for remote...", url)
+		logging.Trace("Downloading and installing tezbake for remote...", "url", url)
 		err = util.DownloadFile(url, bbCliForRemoteFile, false)
 		util.AssertE(err, "Failed to download tezbake for the remote!")
 	}

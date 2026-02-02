@@ -390,9 +390,9 @@ to help you choose the appropriate snapshot for your needs.`,
 		}
 
 		if nodePath != "" {
-			logging.Info("Bootstrapping node at:", "nodePath", nodePath)
+			logging.Info("Bootstrapping node at:", "node_path", nodePath)
 		}
-		logging.Info("Bootstrapping from:", "snapshotSource", snapshotSource)
+		logging.Info("Bootstrapping from:", "snapshot_source", snapshotSource)
 		if blockHash != "" {
 			logging.Info("Block hash:", "hash", blockHash)
 		}

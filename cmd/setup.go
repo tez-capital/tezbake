@@ -71,7 +71,7 @@ var setupCmd = &cobra.Command{
 			// extract last segment and use it as id if it does not contain whitespace
 			id = filepath.Base(cli.BBdir)
 			if strings.Contains(id, " ") {
-				logging.Error("Please specify id for baker. 'bb-default' id is allowed only for bake buddy installed in default path! The inferred id contains whitespace.", "defaultPath", constants.DefaultBBDirectory, "id", id)
+				logging.Error("Please specify id for baker. 'bb-default' id is allowed only for bake buddy installed in default path! The inferred id contains whitespace.", "default_path", constants.DefaultBBDirectory, "id", id)
 				os.Exit(constants.ExitInvalidId)
 			}
 		}
@@ -193,7 +193,7 @@ var setupCmd = &cobra.Command{
 					isUserConfirmed = util.Confirm(fmt.Sprintf("DAL - node endpoint '%s' is different from actual node endpoint '%s'. Do you want to update the DAL - node endpoint to match the actual node endpoint?", dalNodeEndpoint, nodeEndpoint), false, "Failed to confirm DAL node endpoint update!")
 				}
 				if isUserConfirmed {
-					logging.Info("Updating dal's node endpoint", "nodeEndpoint", nodeEndpoint)
+					logging.Info("Updating dal's node endpoint", "node_endpoint", nodeEndpoint)
 					util.AssertEE(apps.DalNode.UpdateNodeEndpoint(nodeEndpoint), "Failed to update dal node endpoint!", constants.ExitInternalError)
 					exitCode, err := apps.DalNode.Execute("setup", "--configure") // reconfigure to apply changes
 					util.AssertEE(err, "Failed to reconfigure dal node!", exitCode)
@@ -206,7 +206,7 @@ var setupCmd = &cobra.Command{
 					isUserConfirmed = util.Confirm(fmt.Sprintf("NODE - dal endpoint '%s' is different from actual dal endpoint '%s'. Do you want to update the NODE - dal endpoint to match the actual dal endpoint?", nodeDalEndpoint, dalEndpoint), false, "Failed to confirm node dal endpoint update!")
 				}
 				if isUserConfirmed {
-					logging.Info("Updating node's dal endpoint", "dalEndpoint", dalEndpoint)
+					logging.Info("Updating node's dal endpoint", "dal_endpoint", dalEndpoint)
 					util.AssertEE(apps.Node.UpdateDalEndpoint(dalEndpoint), "Failed to update dal node endpoint!", constants.ExitInternalError)
 					exitCode, err := apps.Node.Execute("setup", "--configure") // reconfigure to apply changes
 					util.AssertEE(err, "Failed to reconfigure node!", exitCode)

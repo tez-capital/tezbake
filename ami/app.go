@@ -9,7 +9,7 @@ import (
 )
 
 func SetupApp(appDir string, args ...string) (int, error) {
-	logging.Trace("Installing...", "appDir", appDir)
+	logging.Trace("Installing...", "app_dir", appDir)
 	exitCode, err := Execute(appDir, "--erase-cache")
 	if err != nil {
 		logging.Error("Failed to erase cache:", "error", err)

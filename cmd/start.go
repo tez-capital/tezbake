@@ -26,7 +26,7 @@ var startCmd = &cobra.Command{
 			util.AssertEE(err, fmt.Sprintf("Failed to starts %s's services!", v.GetId()), exitCode)
 		}
 
-		logging.Info("Requested services started succesfully")
+		logging.Info("Requested services started successfully")
 	},
 }
 

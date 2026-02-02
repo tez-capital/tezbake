@@ -82,7 +82,7 @@ func ResolveAttestationProfile(pkh string) (string, error) {
 				logging.Warn("Key is not active:", "key", pkh)
 			}
 		default:
-			logging.Warn("Failed to check whether key is a delegate:", "key", pkh, "response", response.Status)
+			logging.Warn("Failed to check whether key is a delegate:", "key", pkh, "response_status", response.Status)
 		}
 		return pkh, nil
 	}
