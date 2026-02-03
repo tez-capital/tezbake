@@ -9,8 +9,7 @@ import (
 	"github.com/tez-capital/tezbake/apps/base"
 	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
-
-	log "github.com/sirupsen/logrus"
+	"github.com/tez-capital/tezbake/logging"
 )
 
 var (
@@ -63,7 +62,7 @@ func (app *Node) GetUser() string {
 
 	def, _, err := base.LoadAppDefinition(app)
 	if err != nil {
-		log.Warnf("Failed to load %s definition (%s)!", app.GetId(), err.Error())
+		logging.Warn("Failed to load definition:", "app", app.GetId(), "error", err.Error())
 		return ""
 	}
 	if user, ok := def["user"].(string); ok {

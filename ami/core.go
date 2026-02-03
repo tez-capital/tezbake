@@ -2,12 +2,11 @@ package ami
 
 import (
 	"errors"
-	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/tez-capital/tezbake/logging"
 )
 
 var (
@@ -24,7 +23,7 @@ func GetFromPathCandidates(candidates []string) (string, error) {
 }
 
 func GetEliAndAmiPath() (string, string, error) {
-	slog.Debug("Looking for eli and ami in PATH", "PATH", os.Getenv("PATH"))
+	logging.Debug("Looking for eli and ami in PATH", "PATH", os.Getenv("PATH"))
 
 	// Try to find eli and ami in /usr/local/bin first
 	eliPath, _ := GetFromPathCandidates([]string{"/usr/local/bin/eli"})
@@ -58,7 +57,7 @@ func EraseCache() (int, error) {
 	eliArgs = append(eliArgs, amiPath)
 	eliArgs = append(eliArgs, options.ToAmiArgs()...)
 	eliArgs = append(eliArgs, "--erase-cache")
-	log.Trace("Executing: " + eliPath + " " + strings.Join(eliArgs, " "))
+	logging.Trace("Executing:", "eli_path", eliPath, "eli_args", strings.Join(eliArgs, " "))
 	eliProc := exec.Command(eliPath, eliArgs...)
 	eliProc.Stdout = os.Stdout
 	eliProc.Stderr = os.Stderr

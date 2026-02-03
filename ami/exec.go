@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/tez-capital/tezbake/logging"
 )
 
 func ExecuteRaw(args ...string) (int, error) {
@@ -19,7 +19,7 @@ func ExecuteRaw(args ...string) (int, error) {
 	eliArgs := make([]string, 0)
 	eliArgs = append(eliArgs, amiPath)
 	eliArgs = append(eliArgs, args...)
-	log.Trace("Executing: " + eliPath + " " + strings.Join(eliArgs, " "))
+	logging.Trace("Executing:", "eli_path", eliPath, "eli_args", strings.Join(eliArgs, " "))
 	eliProc := exec.Command(eliPath, eliArgs...)
 	eliProc.Stdout = os.Stdout
 	eliProc.Stderr = os.Stderr

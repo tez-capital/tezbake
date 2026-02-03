@@ -3,45 +3,45 @@ package util
 import (
 	"os"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/tez-capital/tezbake/logging"
 )
 
 func AssertSB(check bool, msg string) {
 	if !check {
-		log.Error(msg)
+		logging.Error(msg)
 	}
 }
 
 func AssertB(check bool, msg string) {
 	if !check {
-		log.Error(msg)
+		logging.Error(msg)
 		os.Exit(-1)
 	}
 }
 
 func AssertBE(check bool, msg string, exitCode int) {
 	if !check {
-		log.Error(msg)
+		logging.Error(msg)
 		os.Exit(exitCode)
 	}
 }
 
 func AssertSE(err error, msg string) {
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error(msg)
+		logging.Error(msg, "error", err)
 	}
 }
 
 func AssertE(err error, msg string) {
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error(msg)
+		logging.Error(msg, "error", err)
 		os.Exit(-1)
 	}
 }
 
 func AssertEE(err error, msg string, exitCode int) {
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error(msg)
+		logging.Error(msg, "error", err)
 		os.Exit(exitCode)
 	}
 }

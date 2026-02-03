@@ -11,10 +11,10 @@ import (
 	"github.com/tez-capital/tezbake/apps/base"
 	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
+	"github.com/tez-capital/tezbake/logging"
 	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -66,7 +66,7 @@ var removeCmd = &cobra.Command{
 			}
 		}
 		if !isUserConfirmed {
-			log.Info("Aborting removal.")
+			logging.Info("Aborting removal.")
 			os.Exit(constants.ExitOperationCanceled)
 		}
 		removeArgs := []string{}
@@ -89,7 +89,7 @@ var removeCmd = &cobra.Command{
 		if removingAllInstalled && shouldRemoveAll {
 			os.RemoveAll(cli.BBdir)
 		}
-		log.Info("tezbake removal successful")
+		logging.Info("tezbake removal successful")
 	},
 }
 

@@ -7,14 +7,13 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
-	"strings"
 
 	"github.com/tez-capital/tezbake/apps"
 	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
+	"github.com/tez-capital/tezbake/logging"
 	"github.com/tez-capital/tezbake/util"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -24,11 +23,11 @@ var listLedgersCmd = &cobra.Command{
 	Long:  "Collects and prits list of avaialble ledger ids.",
 	Run: func(cmd *cobra.Command, args []string) {
 		tezClientPath := path.Join(apps.Signer.GetPath(), "bin", "client")
-		log.Trace("Executing: " + strings.Join([]string{tezClientPath, "list", "connected", "ledgers"}, " "))
+		logging.Trace("Listing connected ledgers:", "tez_client_path", tezClientPath)
 		output, err := exec.Command(tezClientPath, "list", "connected", "ledgers").CombinedOutput()
 		if matched, _ := regexp.Match("Error:", output); err != nil || matched {
 			fmt.Println(string(output))
-			log.WithFields(log.Fields{"error": err}).Error("Failed to list ledgers!")
+			logging.Error("Failed to list ledgers!", "error", err)
 			os.Exit(constants.ExitExternalError)
 		}
 		matchLedgers := regexp.MustCompile("## Ledger `(.*?)`")

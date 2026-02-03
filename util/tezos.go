@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/tez-capital/tezbake/constants"
+	"github.com/tez-capital/tezbake/logging"
 )
 
 func resolveSecondaryKey(pkh string) (string, error) {
@@ -16,8 +16,8 @@ func resolveSecondaryKey(pkh string) (string, error) {
 	var bakers []struct {
 		Address string `json:"address"`
 	}
-	log.Infof("Checking if key %s is a secondary key...", pkh)
-	log.Debugf("Checking through %s...", url)
+	logging.Info("Checking if key is a secondary key...", "key", pkh)
+	logging.Debug("Checking through...", "url", url)
 
 	client := &http.Client{
 		Transport: &http.Transport{
@@ -51,8 +51,8 @@ func ResolveAttestationProfile(pkh string) (string, error) {
 	var delegate struct {
 		Active bool `json:"active"`
 	}
-	log.Infof("Checking if key %s is a delegate...", pkh)
-	log.Debugf("Checking through %s...", url)
+	logging.Info("Checking if key is a delegate...", "key", pkh)
+	logging.Debug("Checking through...", "url", url)
 	client := &http.Client{
 		Transport: &http.Transport{
 			DialContext: (&net.Dialer{
@@ -77,19 +77,19 @@ func ResolveAttestationProfile(pkh string) (string, error) {
 			err = json.NewDecoder(response.Body).Decode(&delegate)
 			switch {
 			case err != nil:
-				log.Warnf("Failed to decode response for key %s: %v", pkh, err)
+				logging.Warn("Failed to decode response for key:", "key", pkh, "error", err)
 			case !delegate.Active:
-				log.Warnf("Key %s is not active", pkh)
+				logging.Warn("Key is not active:", "key", pkh)
 			}
 		default:
-			log.Warnf("Failed to check whether key %s is a delegate: %s", pkh, response.Status)
+			logging.Warn("Failed to check whether key is a delegate:", "key", pkh, "response_status", response.Status)
 		}
 		return pkh, nil
 	}
 
 	secondaryKeyOwner, err := resolveSecondaryKey(pkh)
 	if err == nil {
-		log.Infof("Key %s is a secondary key for delegate %s", pkh, secondaryKeyOwner)
+		logging.Info("Key is a secondary key for delegate", "key", pkh, "delegate", secondaryKeyOwner)
 		return secondaryKeyOwner, nil
 	}
 

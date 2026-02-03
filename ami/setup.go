@@ -5,12 +5,12 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/tez-capital/tezbake/logging"
 	"github.com/tez-capital/tezbake/util"
 
 	"path"
 
 	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -18,7 +18,7 @@ var (
 )
 
 func Install(silent bool) (int, error) {
-	log.Trace("Downloading eli&ami install script...")
+	logging.Trace("Downloading eli&ami install script...")
 
 	tmpInstallScript := path.Join(os.TempDir(), fmt.Sprintf("%s-%s", uuid.NewString(), "install.sh"))
 	err := util.DownloadFile(amiInstallScriptSource, tmpInstallScript, false)
@@ -31,7 +31,7 @@ func Install(silent bool) (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	log.Trace("Executing eli&ami install script...")
+	logging.Trace("Executing eli&ami install script...")
 	installProc := exec.Command(shPath, tmpInstallScript)
 	switch {
 	case silent:

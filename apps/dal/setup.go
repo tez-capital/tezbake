@@ -9,9 +9,8 @@ import (
 	"github.com/tez-capital/tezbake/apps/base"
 	"github.com/tez-capital/tezbake/apps/signer"
 	"github.com/tez-capital/tezbake/constants"
+	"github.com/tez-capital/tezbake/logging"
 	"github.com/tez-capital/tezbake/util"
-
-	log "github.com/sirupsen/logrus"
 )
 
 func promptReuseElevateCredentials() bool {
@@ -25,7 +24,7 @@ func (app *DalNode) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 		config := ctx.ToRemoteConfiguration(app)
 		useExistingCredentials := false
 		if err == nil && !ctx.RemoteReset {
-			log.Info("Old dal remote locator found. Merging...")
+			logging.Info("Old dal remote locator found. Merging...")
 			config.PopulateWith(locator)
 			useExistingCredentials = promptReuseElevateCredentials()
 		}
@@ -56,7 +55,7 @@ func (app *DalNode) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 		// on remote we need to use locator username
 		ctx.User = locator.Username
 	case app.IsRemoteApp():
-		log.Warn("Found remote app locator. Setup will run on remote.")
+		logging.Warn("Found remote app locator. Setup will run on remote.")
 		ami.SetupRemoteTezbake(app.GetPath(), "latest")
 		locator, err := ami.LoadRemoteLocator(app.GetPath())
 		if err != nil {
@@ -90,7 +89,7 @@ func (app *DalNode) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 	oldAppDef, err := ami.ReadAppDefinition(app.GetPath(), constants.DefaultAppJsonName)
 	if oldAppDef != nil && err == nil {
 		if oldConfiguration, ok := oldAppDef["configuration"].(map[string]any); ok {
-			log.Info("Found old configuration. Merging...")
+			logging.Info("Found old configuration. Merging...")
 			appDef["configuration"] = util.MergeMapsDeep(oldConfiguration, appDef["configuration"].(map[string]any), true)
 		}
 	}
@@ -119,7 +118,7 @@ func (app *DalNode) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 
 func (app *DalNode) SetAttesterProfiles(keys []string) error {
 	if isRemote, _ := ami.IsRemoteApp(app.GetPath()); isRemote {
-		log.Warn("Found remote app locator. Setup will run on remote.")
+		logging.Warn("Found remote app locator. Setup will run on remote.")
 	}
 
 	rawAttesterProfiles := strings.Join(keys, "\n")
