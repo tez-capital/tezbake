@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/alis-is/go-common/log"
 	"github.com/tez-capital/tezbake/constants"
+	"go.alis.is/common/log"
 )
 
 func resolveSecondaryKey(pkh string) (string, error) {

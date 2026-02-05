@@ -14,11 +14,11 @@ require (
 	github.com/samber/lo v1.52.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
+	go.alis.is/common v0.0.0-20260205204218-c59b3889c945
 	golang.org/x/crypto v0.47.0
 )
 
 require (
-	github.com/alis-is/go-common v0.0.0-20260205184857-479f81a6853d
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/colorprofile v0.4.1 // indirect

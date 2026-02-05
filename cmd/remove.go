@@ -6,7 +6,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/alis-is/go-common/log"
 	"github.com/samber/lo"
 	"github.com/tez-capital/tezbake/apps"
 	"github.com/tez-capital/tezbake/apps/base"
@@ -14,6 +13,7 @@ import (
 	"github.com/tez-capital/tezbake/constants"
 	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
+	"go.alis.is/common/log"
 
 	"github.com/spf13/cobra"
 )

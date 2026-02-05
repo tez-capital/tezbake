@@ -5,11 +5,11 @@ import (
 	"path"
 	"strings"
 
-	"github.com/alis-is/go-common/log"
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps/base"
 	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
+	"go.alis.is/common/log"
 )
 
 var (

@@ -3,11 +3,11 @@ package peak
 import (
 	"fmt"
 
-	"github.com/alis-is/go-common/log"
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps/base"
 	"github.com/tez-capital/tezbake/constants"
 	"github.com/tez-capital/tezbake/util"
+	"go.alis.is/common/log"
 )
 
 func (app *Peak) Setup(ctx *base.SetupContext, args ...string) (int, error) {

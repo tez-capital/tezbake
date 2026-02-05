@@ -5,12 +5,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/alis-is/go-common/log"
 	"github.com/tez-capital/tezbake/apps"
 	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
 	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
+	"go.alis.is/common/log"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"

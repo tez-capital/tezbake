@@ -3,10 +3,10 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/alis-is/go-common/log"
 	"github.com/tez-capital/tezbake/apps"
 	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
+	"go.alis.is/common/log"
 
 	"github.com/spf13/cobra"
 )

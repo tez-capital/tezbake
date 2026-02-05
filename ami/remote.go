@@ -14,12 +14,12 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/alis-is/go-common/log"
 	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
 	sshKey "github.com/tez-capital/tezbake/ssh"
 	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
+	"go.alis.is/common/log"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"

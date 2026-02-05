@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alis-is/go-common/log"
 	"github.com/spf13/cobra"
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
+	"go.alis.is/common/log"
 )
 
 const (

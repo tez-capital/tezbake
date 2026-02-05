@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/alis-is/go-common/log"
+	"go.alis.is/common/log"
 )
 
 func SetupApp(appDir string, args ...string) (int, error) {

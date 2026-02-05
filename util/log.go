@@ -3,7 +3,7 @@ package util
 import (
 	"os"
 
-	"github.com/alis-is/go-common/log"
+	"go.alis.is/common/log"
 )
 
 func AssertSB(check bool, msg string) {

@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/alis-is/go-common/log"
+	"go.alis.is/common/log"
 
 	"github.com/tez-capital/tezbake/constants"
 )

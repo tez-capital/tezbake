@@ -5,8 +5,8 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/alis-is/go-common/log"
 	"github.com/tez-capital/tezbake/util"
+	"go.alis.is/common/log"
 
 	"path"
 

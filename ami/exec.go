@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/alis-is/go-common/log"
+	"go.alis.is/common/log"
 )
 
 func ExecuteRaw(args ...string) (int, error) {

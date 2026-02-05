@@ -6,10 +6,10 @@ import (
 	"os/user"
 	"time"
 
-	"github.com/alis-is/go-common/log"
 	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
 	"github.com/tez-capital/tezbake/util"
+	"go.alis.is/common/log"
 )
 
 func getCurrentUser() *user.User {

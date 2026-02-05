@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/alis-is/go-common/log"
 	"github.com/samber/lo"
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps"
@@ -15,6 +14,7 @@ import (
 	"github.com/tez-capital/tezbake/constants"
 	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
+	"go.alis.is/common/log"
 
 	"github.com/spf13/cobra"
 )
