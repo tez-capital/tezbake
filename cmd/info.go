@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/alis-is/go-common/log"
 	"github.com/tez-capital/tezbake/apps"
 	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
-	"github.com/tez-capital/tezbake/logging"
 	"github.com/tez-capital/tezbake/util"
 
 	"github.com/spf13/cobra"
@@ -42,7 +42,7 @@ var infoCmd = &cobra.Command{
 				}
 			}
 
-			logging.Debug("Collecting info for:", "app", v.GetId())
+			log.Debug("Collecting info for:", "app", v.GetId())
 			optionsJson, _ := json.Marshal(options)
 			if cli.JsonLogFormat {
 				result[v.GetId()], _ = v.GetInfo(optionsJson)

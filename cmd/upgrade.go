@@ -3,9 +3,9 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/alis-is/go-common/log"
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps"
-	"github.com/tez-capital/tezbake/logging"
 	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
 
@@ -25,7 +25,7 @@ var upgradeCmd = &cobra.Command{
 
 		if !util.GetCommandBoolFlagS(cmd, SkipAmiSetup) {
 			// install ami by default in case of remote instance
-			logging.Info("Upgrading ami and eli...")
+			log.Info("Upgrading ami and eli...")
 			exitCode, err := ami.Install(true)
 			util.AssertEE(err, "Failed to install ami and eli!", exitCode)
 		}
@@ -42,7 +42,7 @@ var upgradeCmd = &cobra.Command{
 			exitCode, err := v.Upgrade(upgradeContext)
 			util.AssertEE(err, fmt.Sprintf("Failed to upgrade '%s'!", v.GetId()), exitCode)
 		}
-		logging.Info("Upgrade successful.")
+		log.Info("Upgrade successful.")
 	},
 }
 

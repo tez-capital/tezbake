@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/alis-is/go-common/log"
 	"github.com/tez-capital/tezbake/apps"
-	"github.com/tez-capital/tezbake/logging"
 	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
 
@@ -26,7 +26,7 @@ var stopCmd = &cobra.Command{
 			util.AssertEE(err, fmt.Sprintf("Failed to stop %s's services!", v.GetId()), exitCode)
 		}
 
-		logging.Info("Requested services stopped successfully")
+		log.Info("Requested services stopped successfully")
 	},
 }
 

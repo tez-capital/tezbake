@@ -5,11 +5,11 @@ import (
 	"path"
 	"strings"
 
+	"github.com/alis-is/go-common/log"
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps/base"
 	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
-	"github.com/tez-capital/tezbake/logging"
 )
 
 var (
@@ -62,7 +62,7 @@ func (app *Node) GetUser() string {
 
 	def, _, err := base.LoadAppDefinition(app)
 	if err != nil {
-		logging.Warn("Failed to load definition:", "app", app.GetId(), "error", err.Error())
+		log.Warn("Failed to load definition:", "app", app.GetId(), "error", err.Error())
 		return ""
 	}
 	if user, ok := def["user"].(string); ok {

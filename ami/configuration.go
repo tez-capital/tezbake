@@ -9,8 +9,8 @@ import (
 	"os"
 	"path"
 
+	"github.com/alis-is/go-common/log"
 	"github.com/tez-capital/tezbake/constants"
-	"github.com/tez-capital/tezbake/logging"
 	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
 
@@ -24,7 +24,7 @@ func findAppDefinitionRemote(sftpClient *sftp.Client, workingDir string) (map[st
 		appDefPath := path.Join(workingDir, candidate)
 		appDefFile, err := sftpClient.OpenFile(appDefPath, os.O_RDONLY)
 		if err == nil {
-			logging.Trace("App definition found in", "app_def_path", appDefPath)
+			log.Trace("App definition found in", "app_def_path", appDefPath)
 			appDef := make(map[string]any)
 			appDefContent, err := io.ReadAll(appDefFile)
 			if err != nil {
@@ -56,7 +56,7 @@ func FindAppDefinition(workingDir string) (map[string]any, string, error) {
 		appDefPath := path.Join(workingDir, candidate)
 		appDefContent, err := os.ReadFile(appDefPath)
 		if err == nil {
-			logging.Trace("App definition found in", "app_def_path", appDefPath)
+			log.Trace("App definition found in", "app_def_path", appDefPath)
 			appDef := make(map[string]any)
 			err = hjson.Unmarshal(appDefContent, &appDef)
 			return appDef, appDefPath, err
@@ -66,7 +66,7 @@ func FindAppDefinition(workingDir string) (map[string]any, string, error) {
 }
 
 func LoadAppDefinition(app string) (map[string]any, error) {
-	logging.Trace("Loading app definition from...", "app", app)
+	log.Trace("Loading app definition from...", "app", app)
 	appDef, _, err := FindAppDefinition(app)
 	if err != nil {
 		return nil, err
@@ -118,7 +118,7 @@ func GetAppActiveModel(workingDir string) (map[string]any, error) {
 
 func prepareFolderStructure(sshClient *ssh.Client, instancePath string, app string, user string, env *map[string]string) error {
 	workingDir := path.Join(instancePath, app)
-	logging.Trace("Preparing folder structure for remote...", "working_dir", workingDir)
+	log.Trace("Preparing folder structure for remote...", "working_dir", workingDir)
 	encodedCmd := base64.StdEncoding.EncodeToString([]byte("mkdir -p " + workingDir))
 	result := system.RunSshCommand(sshClient, "tezbake execute --elevate --base64 "+encodedCmd, env)
 	if result.Error != nil {
@@ -132,7 +132,7 @@ func prepareFolderStructure(sshClient *ssh.Client, instancePath string, app stri
 func writeAppConfigurationToRemote(session *TezbakeRemoteSession, workingDir string, configuration map[string]any) error {
 	var appDef []byte
 	var appDefPath string
-	logging.Trace("Writing app configuration to remote...", "working_dir", workingDir)
+	log.Trace("Writing app configuration to remote...", "working_dir", workingDir)
 
 	appDef, err := json.MarshalIndent(configuration, "", "\t")
 	if err != nil {
@@ -151,7 +151,7 @@ func writeAppConfigurationToRemote(session *TezbakeRemoteSession, workingDir str
 		return err
 	}
 
-	logging.Trace("App configuration written to", "app_def_path", appDefPath)
+	log.Trace("App configuration written to", "app_def_path", appDefPath)
 	return nil
 }
 

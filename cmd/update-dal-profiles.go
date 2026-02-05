@@ -5,10 +5,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/alis-is/go-common/log"
 	"github.com/samber/lo"
 	"github.com/tez-capital/tezbake/apps"
 	"github.com/tez-capital/tezbake/constants"
-	"github.com/tez-capital/tezbake/logging"
 	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
 
@@ -48,7 +48,7 @@ var updateDalProfilesCmd = &cobra.Command{
 			util.AssertB(exitCode == 0, "Failed to get baker key hash!")
 
 			foundKeys := strings.Split(strings.TrimSpace(string(output)), "\n")
-			logging.Info("Importing keys to dal node...", "keys", keys)
+			log.Info("Importing keys to dal node...", "keys", keys)
 
 			keys = append(keys, foundKeys...)
 		}
@@ -64,7 +64,7 @@ var updateDalProfilesCmd = &cobra.Command{
 			profiles = append(profiles, profile)
 		}
 
-		logging.Info("Attester profiles resolved successfully, updating dal node...", "profiles", profiles)
+		log.Info("Attester profiles resolved successfully, updating dal node...", "profiles", profiles)
 
 		err := apps.DalNode.SetAttesterProfiles(lo.Uniq(profiles))
 		util.AssertEE(err, "Failed to set attester profiles!", constants.ExitAppConfigurationLoadFailed)
@@ -72,7 +72,7 @@ var updateDalProfilesCmd = &cobra.Command{
 		exitCode, err := apps.DalNode.Execute("setup", "--configure") // reconfigure to apply changes
 		util.AssertEE(err, "Failed to setup dal node!", exitCode)
 		util.AssertBE(exitCode == 0, "Failed to setup dal node!", exitCode)
-		logging.Info("Attester profiles updated successfully. ", "profiles", profiles)
+		log.Info("Attester profiles updated successfully. ", "profiles", profiles)
 	},
 }
 

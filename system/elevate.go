@@ -6,9 +6,9 @@ import (
 	"os/user"
 	"time"
 
+	"github.com/alis-is/go-common/log"
 	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
-	"github.com/tez-capital/tezbake/logging"
 	"github.com/tez-capital/tezbake/util"
 )
 
@@ -26,10 +26,10 @@ func isElevated() bool {
 func RequireElevatedUser(injectArgs ...string) {
 	cli.ElevationRequired = true
 	if isElevated() {
-		logging.Trace("Process already elevated...")
+		log.Trace("Process already elevated...")
 		return
 	} else {
-		logging.Trace("Elevation required! Trying to elevate...")
+		log.Trace("Elevation required! Trying to elevate...")
 	}
 
 	// try elevate
@@ -56,7 +56,7 @@ func RequireElevatedUser(injectArgs ...string) {
 
 		select {
 		case <-time.After(3 * time.Second):
-			logging.Warn("Timeout occurred while testing sudo access")
+			log.Warn("Timeout occurred while testing sudo access")
 		case err := <-done:
 			util.AssertEE(err, "Failed to execute test sudo!", constants.ExitExternalError)
 			testSuccess = true
@@ -83,7 +83,7 @@ func RequireElevatedUser(injectArgs ...string) {
 	}
 	// other options?
 	if !IsTty() {
-		logging.Debug("No self elevation method available!")
+		log.Debug("No self elevation method available!")
 		os.Exit(constants.ExitElevationRequired)
 	}
 	_, err := exec.LookPath("sudo")

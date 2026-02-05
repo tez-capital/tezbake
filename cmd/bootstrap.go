@@ -5,10 +5,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/alis-is/go-common/log"
 	"github.com/tez-capital/tezbake/apps"
 	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
-	"github.com/tez-capital/tezbake/logging"
 	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
 
@@ -318,13 +318,13 @@ func runSnapshotSelector(nodePath string) snapshotSelection {
 	model := newBootstrapModel(nodePath)
 	result, err := tea.NewProgram(model, tea.WithInput(os.Stdin), tea.WithOutput(os.Stdout)).Run()
 	if err != nil {
-		logging.Error("Error running snapshot selector:", "error", err)
+		log.Error("Error running snapshot selector:", "error", err)
 		return snapshotSelection{canceled: true}
 	}
 
 	finalModel, ok := result.(bootstrapModel)
 	if !ok {
-		logging.Error("Unexpected model type from snapshot selector")
+		log.Error("Unexpected model type from snapshot selector")
 		return snapshotSelection{canceled: true}
 	}
 
@@ -369,7 +369,7 @@ to help you choose the appropriate snapshot for your needs.`,
 		if len(args) == 0 && system.IsTty() {
 			selection := runSnapshotSelector(nodePath)
 			if selection.canceled {
-				logging.Info("Bootstrap canceled.")
+				log.Info("Bootstrap canceled.")
 				os.Exit(0)
 			}
 			snapshotSource = selection.url
@@ -385,28 +385,28 @@ to help you choose the appropriate snapshot for your needs.`,
 				blockHash = args[1]
 			}
 		} else {
-			logging.Error("No snapshot URL or path provided. Use --help for usage information.")
+			log.Error("No snapshot URL or path provided. Use --help for usage information.")
 			os.Exit(1)
 		}
 
 		if nodePath != "" {
-			logging.Info("Bootstrapping node at:", "node_path", nodePath)
+			log.Info("Bootstrapping node at:", "node_path", nodePath)
 		}
-		logging.Info("Bootstrapping from:", "snapshot_source", snapshotSource)
+		log.Info("Bootstrapping from:", "snapshot_source", snapshotSource)
 		if blockHash != "" {
-			logging.Info("Block hash:", "hash", blockHash)
+			log.Info("Block hash:", "hash", blockHash)
 		}
 		if disableSnapshotCheck {
-			logging.Warn("Snapshot integrity verification disabled")
+			log.Warn("Snapshot integrity verification disabled")
 		}
 		if keepSnapshot {
-			logging.Info("Snapshot will be kept on disk after import")
+			log.Info("Snapshot will be kept on disk after import")
 		}
 
 		// Check if node was running and stop it before bootstrap
 		wasRunning, _ := apps.Node.IsAnyServiceStatus("running")
 		if wasRunning {
-			logging.Info("Stopping node for bootstrap...")
+			log.Info("Stopping node for bootstrap...")
 			exitCode, err := apps.Node.Stop()
 			util.AssertEE(err, "Failed to stop node before bootstrap", exitCode)
 		}
@@ -425,13 +425,13 @@ to help you choose the appropriate snapshot for your needs.`,
 		exitCode, err := apps.Node.Execute(bootstrapArgs...)
 		util.AssertEE(err, "Failed to bootstrap tezos node", exitCode)
 
-		logging.Info("Upgrading storage...")
+		log.Info("Upgrading storage...")
 		exitCode, err = apps.Node.UpgradeStorage()
 		util.AssertEE(err, "Failed to upgrade tezos storage", exitCode)
 
 		// Restart node if it was running before bootstrap
 		if wasRunning {
-			logging.Info("Restarting node...")
+			log.Info("Restarting node...")
 			exitCode, err = apps.Node.Start()
 			util.AssertEE(err, "Failed to restart node after bootstrap", exitCode)
 		}

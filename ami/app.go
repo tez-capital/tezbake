@@ -5,18 +5,18 @@ import (
 	"os"
 	"strings"
 
-	"github.com/tez-capital/tezbake/logging"
+	"github.com/alis-is/go-common/log"
 )
 
 func SetupApp(appDir string, args ...string) (int, error) {
-	logging.Trace("Installing...", "app_dir", appDir)
+	log.Trace("Installing...", "app_dir", appDir)
 	exitCode, err := Execute(appDir, "--erase-cache")
 	if err != nil {
-		logging.Error("Failed to erase cache:", "error", err)
+		log.Error("Failed to erase cache:", "error", err)
 		return exitCode, err
 	}
 	if exitCode != 0 {
-		logging.Error("Failed to erase cache:", "exitcode", exitCode)
+		log.Error("Failed to erase cache:", "exitcode", exitCode)
 		return exitCode, fmt.Errorf("failed to erase cache")
 	}
 

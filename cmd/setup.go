@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/alis-is/go-common/log"
 	"github.com/samber/lo"
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps"
 	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
-	"github.com/tez-capital/tezbake/logging"
 	"github.com/tez-capital/tezbake/system"
 	"github.com/tez-capital/tezbake/util"
 
@@ -71,7 +71,7 @@ var setupCmd = &cobra.Command{
 			// extract last segment and use it as id if it does not contain whitespace
 			id = filepath.Base(cli.BBdir)
 			if strings.Contains(id, " ") {
-				logging.Error("Please specify id for baker. 'bb-default' id is allowed only for bake buddy installed in default path! The inferred id contains whitespace.", "default_path", constants.DefaultBBDirectory, "id", id)
+				log.Error("Please specify id for baker. 'bb-default' id is allowed only for bake buddy installed in default path! The inferred id contains whitespace.", "default_path", constants.DefaultBBDirectory, "id", id)
 				os.Exit(constants.ExitInvalidId)
 			}
 		}
@@ -80,7 +80,7 @@ var setupCmd = &cobra.Command{
 
 		if !util.GetCommandBoolFlagS(cmd, SkipAmiSetup) {
 			// install ami by default in case of remote instance
-			logging.Debug("Installing ami and eli...")
+			log.Debug("Installing ami and eli...")
 			exitCode, err := ami.Install(true)
 			util.AssertEE(err, "Failed to install ami and eli!", exitCode)
 		}
@@ -127,7 +127,7 @@ var setupCmd = &cobra.Command{
 				isUserConfirmed := false
 				if system.IsTty() {
 					if ctx.Remote != "" && !v.IsRemoteApp() {
-						logging.Error("You have already installed this app locally. Please remove it first!", "app", v.GetId())
+						log.Error("You have already installed this app locally. Please remove it first!", "app", v.GetId())
 						os.Exit(constants.ExitNotSupported)
 					}
 
@@ -153,7 +153,7 @@ var setupCmd = &cobra.Command{
 					isUserConfirmed = util.Confirm("DAL_NODE is set in node definition but no dal node found. Do you want to remove it?", false, "Failed to confirm DAL_NODE removal!")
 				}
 				if isUserConfirmed {
-					logging.Info("Removing dal node endpoint from node definition")
+					log.Info("Removing dal node endpoint from node definition")
 					apps.Node.UpdateDalEndpoint("")
 				}
 			}
@@ -161,7 +161,7 @@ var setupCmd = &cobra.Command{
 
 		// post setup - dal + node
 		if !disablePostProcess && apps.Node.IsInstalled() && apps.DalNode.IsInstalled() {
-			logging.Info("Post setup - dal + node")
+			log.Info("Post setup - dal + node")
 
 			// link dal to node
 			nodeModel, err := apps.Node.GetActiveModel()
@@ -193,7 +193,7 @@ var setupCmd = &cobra.Command{
 					isUserConfirmed = util.Confirm(fmt.Sprintf("DAL - node endpoint '%s' is different from actual node endpoint '%s'. Do you want to update the DAL - node endpoint to match the actual node endpoint?", dalNodeEndpoint, nodeEndpoint), false, "Failed to confirm DAL node endpoint update!")
 				}
 				if isUserConfirmed {
-					logging.Info("Updating dal's node endpoint", "node_endpoint", nodeEndpoint)
+					log.Info("Updating dal's node endpoint", "node_endpoint", nodeEndpoint)
 					util.AssertEE(apps.DalNode.UpdateNodeEndpoint(nodeEndpoint), "Failed to update dal node endpoint!", constants.ExitInternalError)
 					exitCode, err := apps.DalNode.Execute("setup", "--configure") // reconfigure to apply changes
 					util.AssertEE(err, "Failed to reconfigure dal node!", exitCode)
@@ -206,7 +206,7 @@ var setupCmd = &cobra.Command{
 					isUserConfirmed = util.Confirm(fmt.Sprintf("NODE - dal endpoint '%s' is different from actual dal endpoint '%s'. Do you want to update the NODE - dal endpoint to match the actual dal endpoint?", nodeDalEndpoint, dalEndpoint), false, "Failed to confirm node dal endpoint update!")
 				}
 				if isUserConfirmed {
-					logging.Info("Updating node's dal endpoint", "dal_endpoint", dalEndpoint)
+					log.Info("Updating node's dal endpoint", "dal_endpoint", dalEndpoint)
 					util.AssertEE(apps.Node.UpdateDalEndpoint(dalEndpoint), "Failed to update dal node endpoint!", constants.ExitInternalError)
 					exitCode, err := apps.Node.Execute("setup", "--configure") // reconfigure to apply changes
 					util.AssertEE(err, "Failed to reconfigure node!", exitCode)
@@ -215,7 +215,7 @@ var setupCmd = &cobra.Command{
 			}
 		}
 
-		logging.Info("Setup successful")
+		log.Info("Setup successful")
 	},
 }
 
@@ -225,7 +225,7 @@ func init() {
 
 	user, err := user.Current()
 	if err != nil {
-		logging.Warn("Failed to get current user!")
+		log.Warn("Failed to get current user!")
 		setupCmd.Flags().StringP(User, "u", "", "User you want to operate BB under.")
 	} else {
 		setupCmd.Flags().StringP(User, "u", user.Username, "User you want to operate BB under.")

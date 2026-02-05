@@ -3,10 +3,10 @@ package signer
 import (
 	"fmt"
 
+	"github.com/alis-is/go-common/log"
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/apps/base"
 	"github.com/tez-capital/tezbake/constants"
-	"github.com/tez-capital/tezbake/logging"
 	"github.com/tez-capital/tezbake/util"
 )
 
@@ -19,7 +19,7 @@ func (app *Signer) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 	oldAppDef, err := ami.ReadAppDefinition(app.GetPath(), constants.DefaultAppJsonName)
 	if oldAppDef != nil && err == nil {
 		if oldConfiguration, ok := oldAppDef["configuration"].(map[string]any); ok {
-			logging.Info("Found old configuration. Merging...")
+			log.Info("Found old configuration. Merging...")
 			appDef["configuration"] = util.MergeMapsDeep(oldConfiguration, appDef["configuration"].(map[string]any), true)
 		}
 	}
