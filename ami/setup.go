@@ -5,8 +5,8 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/tez-capital/tezbake/logging"
 	"github.com/tez-capital/tezbake/util"
+	"go.alis.is/common/log"
 
 	"path"
 
@@ -18,7 +18,7 @@ var (
 )
 
 func Install(silent bool) (int, error) {
-	logging.Trace("Downloading eli&ami install script...")
+	log.Trace("Downloading eli&ami install script...")
 
 	tmpInstallScript := path.Join(os.TempDir(), fmt.Sprintf("%s-%s", uuid.NewString(), "install.sh"))
 	err := util.DownloadFile(amiInstallScriptSource, tmpInstallScript, false)
@@ -31,7 +31,7 @@ func Install(silent bool) (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	logging.Trace("Executing eli&ami install script...")
+	log.Trace("Executing eli&ami install script...")
 	installProc := exec.Command(shPath, tmpInstallScript)
 	switch {
 	case silent:

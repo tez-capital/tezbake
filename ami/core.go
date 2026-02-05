@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/tez-capital/tezbake/logging"
+	"go.alis.is/common/log"
 )
 
 var (
@@ -23,7 +23,7 @@ func GetFromPathCandidates(candidates []string) (string, error) {
 }
 
 func GetEliAndAmiPath() (string, string, error) {
-	logging.Debug("Looking for eli and ami in PATH", "PATH", os.Getenv("PATH"))
+	log.Debug("Looking for eli and ami in PATH", "PATH", os.Getenv("PATH"))
 
 	// Try to find eli and ami in /usr/local/bin first
 	eliPath, _ := GetFromPathCandidates([]string{"/usr/local/bin/eli"})
@@ -57,7 +57,7 @@ func EraseCache() (int, error) {
 	eliArgs = append(eliArgs, amiPath)
 	eliArgs = append(eliArgs, options.ToAmiArgs()...)
 	eliArgs = append(eliArgs, "--erase-cache")
-	logging.Trace("Executing:", "eli_path", eliPath, "eli_args", strings.Join(eliArgs, " "))
+	log.Trace("Executing:", "eli_path", eliPath, "eli_args", strings.Join(eliArgs, " "))
 	eliProc := exec.Command(eliPath, eliArgs...)
 	eliProc.Stdout = os.Stdout
 	eliProc.Stderr = os.Stderr

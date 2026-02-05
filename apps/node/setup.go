@@ -8,8 +8,8 @@ import (
 	"github.com/tez-capital/tezbake/apps/base"
 	"github.com/tez-capital/tezbake/apps/signer"
 	"github.com/tez-capital/tezbake/constants"
-	"github.com/tez-capital/tezbake/logging"
 	"github.com/tez-capital/tezbake/util"
+	"go.alis.is/common/log"
 )
 
 func promptReuseElevateCredentials() bool {
@@ -23,7 +23,7 @@ func (app *Node) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 		config := ctx.ToRemoteConfiguration(app)
 		useExistingCredentials := false
 		if err == nil && !ctx.RemoteReset {
-			logging.Info("Old node remote locator found. Merging...")
+			log.Info("Old node remote locator found. Merging...")
 			config.PopulateWith(locator)
 			useExistingCredentials = promptReuseElevateCredentials()
 		}
@@ -54,7 +54,7 @@ func (app *Node) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 		// on remote we need to use locator username
 		ctx.User = locator.Username
 	case app.IsRemoteApp():
-		logging.Warn("Found remote app locator. Setup will run on remote.")
+		log.Warn("Found remote app locator. Setup will run on remote.")
 		ami.SetupRemoteTezbake(app.GetPath(), "latest")
 
 		locator, err := ami.LoadRemoteLocator(app.GetPath())
@@ -88,7 +88,7 @@ func (app *Node) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 	oldAppDef, err := ami.ReadAppDefinition(app.GetPath(), constants.DefaultAppJsonName)
 	if oldAppDef != nil && err == nil {
 		if oldConfiguration, ok := oldAppDef["configuration"].(map[string]any); ok {
-			logging.Info("Found old configuration. Merging...")
+			log.Info("Found old configuration. Merging...")
 			appDef["configuration"] = util.MergeMapsDeep(oldConfiguration, appDef["configuration"].(map[string]any), true)
 		}
 	}

@@ -1,6 +1,6 @@
 module github.com/tez-capital/tezbake
 
-go 1.24.2
+go 1.25.7
 
 require (
 	github.com/charmbracelet/bubbles v0.21.0
@@ -14,6 +14,7 @@ require (
 	github.com/samber/lo v1.52.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
+	go.alis.is/common v0.0.0-20260205204218-c59b3889c945
 	golang.org/x/crypto v0.47.0
 )
 

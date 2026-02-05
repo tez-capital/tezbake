@@ -14,7 +14,7 @@ import (
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
-	"github.com/tez-capital/tezbake/logging"
+	"go.alis.is/common/log"
 )
 
 const (
@@ -44,19 +44,20 @@ func setupLogger(level slog.Level, format string, noColor bool) (jsonLogFormat b
 
 	handlers := make([]slog.Handler, 0, 2)
 	if len(textWriters) > 0 {
-		textHandler := logging.NewPrettyTextLogHandler(logging.NewMultiWriter(textWriters...), logging.PrettyHandlerOptions{
+		textHandler := log.NewPrettyTextLogHandler(log.NewMultiWriter(textWriters...), log.PrettyHandlerOptions{
 			HandlerOptions: slog.HandlerOptions{Level: level},
 			NoColor:        noColor,
+			AppName:        "tezbake",
 		})
 		handlers = append(handlers, textHandler)
 	}
 
 	if len(jsonWriters) > 0 {
-		jsonHandler := slog.NewJSONHandler(logging.NewMultiWriter(jsonWriters...), &slog.HandlerOptions{Level: level})
+		jsonHandler := slog.NewJSONHandler(log.NewMultiWriter(jsonWriters...), &slog.HandlerOptions{Level: level})
 		handlers = append(handlers, jsonHandler)
 	}
 
-	slog.SetDefault(slog.New(logging.NewSlogMultiHandler(handlers...)))
+	slog.SetDefault(slog.New(log.NewSlogMultiHandler(handlers...)))
 
 	return
 }
@@ -80,11 +81,11 @@ Copyright © %d tez.capital
 
 			logLevel := slog.LevelInfo
 			logLevelFlag, _ := cmd.Flags().GetString(LOG_LEVEL_FLAG)
-			logLevel, cli.LogLevel = logging.ParseLevel(logLevelFlag)
+			logLevel, cli.LogLevel = log.ParseLevel(logLevelFlag)
 			format, _ := cmd.Flags().GetString(OUTPUT_FORMAT_FLAG)
 			noColor, _ := cmd.Flags().GetBool(NO_COLOR_FLAG)
 			cli.JsonLogFormat = setupLogger(logLevel, format, noColor)
-			logging.Debug("logger configured", "format", format, "level", logLevelFlag)
+			log.Debug("logger configured", "format", format, "level", logLevelFlag)
 
 			remoteVars, _ := cmd.Flags().GetString(REMOTE_INSTANCE_VARS_FLAG)
 			if remoteVars != "" {
