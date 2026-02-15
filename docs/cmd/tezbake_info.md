@@ -19,6 +19,7 @@ tezbake info [flags]
   -h, --help              help for info
       --node              Prints info for node.
       --node-chain        
+      --node-keys         
       --node-services     
       --node-simple       
       --node-voting       

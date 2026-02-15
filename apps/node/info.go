@@ -72,6 +72,7 @@ type VotingPeriod struct {
 type InfoCollectionOptions struct {
 	Timeout  int
 	Chain    bool
+	Keys     bool
 	Simple   bool
 	Services bool
 	Voting   bool
@@ -86,6 +87,9 @@ func (infoCollectionOptions *InfoCollectionOptions) toAmiArgs() []string {
 	if infoCollectionOptions.Chain {
 		args = append(args, "--chain")
 	}
+	if infoCollectionOptions.Keys {
+		args = append(args, "--keys")
+	}
 	if infoCollectionOptions.Simple {
 		args = append(args, "--simple")
 	}
@@ -99,7 +103,7 @@ func (infoCollectionOptions *InfoCollectionOptions) toAmiArgs() []string {
 }
 
 func (nico *InfoCollectionOptions) All() bool {
-	return !nico.Chain && !nico.Simple && !nico.Services && !nico.Voting
+	return !nico.Chain && !nico.Keys && !nico.Simple && !nico.Services && !nico.Voting
 }
 
 func (app *Node) getInfoCollectionOptions(optionsJson []byte) *InfoCollectionOptions {
@@ -190,7 +194,7 @@ func (app *Node) PrintInfo(optionsJson []byte) error {
 		nodeTable.AppendRow(table.Row{"Connections", nodeInfo.Connections})
 	}
 
-	if infoCollectionOptions.All() || infoCollectionOptions.Simple || (infoCollectionOptions.Services && infoCollectionOptions.Chain) {
+	if infoCollectionOptions.All() || infoCollectionOptions.Simple || infoCollectionOptions.Keys {
 		nodeTable.AppendSeparator()
 		nodeTable.AppendRow(table.Row{"Baking Keys", "Baking Keys"}, table.RowConfig{AutoMerge: true})
 		nodeTable.AppendSeparator()
