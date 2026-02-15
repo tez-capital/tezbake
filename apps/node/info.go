@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/tez-capital/tezbake/ami"
@@ -15,16 +16,17 @@ import (
 
 type Info struct {
 	base.InfoBase
-	Bootstrapped        bool                           `json:"bootstrapped"`
-	ChainHead           ChainHeadInfo                  `json:"chain_head"`
-	Connections         int                            `json:"connections"`
-	Services            map[string]base.AmiServiceInfo `json:"services"`
-	SyncState           string                         `json:"sync_state"`
-	Type                string                         `json:"type"`
-	Version             string                         `json:"version"`
-	VotingCurrentPeriod VotingCurrentPeriod            `json:"voting_current_period"`
-	VotingProposals     []any                          `json:"voting_proposals"`
-	IsRemote            bool                           `json:"isRemote"`
+	AdditionalBakingKeys map[string]string              `json:"additional_baking_keys"`
+	Bootstrapped         bool                           `json:"bootstrapped"`
+	ChainHead            ChainHeadInfo                  `json:"chain_head"`
+	Connections          int                            `json:"connections"`
+	Services             map[string]base.AmiServiceInfo `json:"services"`
+	SyncState            string                         `json:"sync_state"`
+	Type                 string                         `json:"type"`
+	Version              string                         `json:"version"`
+	VotingCurrentPeriod  VotingCurrentPeriod            `json:"voting_current_period"`
+	VotingProposals      []any                          `json:"voting_proposals"`
+	IsRemote             bool                           `json:"isRemote"`
 }
 
 func (i *Info) UnmarshalJSON(data []byte) error {
@@ -70,6 +72,7 @@ type VotingPeriod struct {
 type InfoCollectionOptions struct {
 	Timeout  int
 	Chain    bool
+	Keys     bool
 	Simple   bool
 	Services bool
 	Voting   bool
@@ -84,6 +87,9 @@ func (infoCollectionOptions *InfoCollectionOptions) toAmiArgs() []string {
 	if infoCollectionOptions.Chain {
 		args = append(args, "--chain")
 	}
+	if infoCollectionOptions.Keys {
+		args = append(args, "--keys")
+	}
 	if infoCollectionOptions.Simple {
 		args = append(args, "--simple")
 	}
@@ -97,7 +103,7 @@ func (infoCollectionOptions *InfoCollectionOptions) toAmiArgs() []string {
 }
 
 func (nico *InfoCollectionOptions) All() bool {
-	return !nico.Chain && !nico.Simple && !nico.Services && !nico.Voting
+	return !nico.Chain && !nico.Keys && !nico.Simple && !nico.Services && !nico.Voting
 }
 
 func (app *Node) getInfoCollectionOptions(optionsJson []byte) *InfoCollectionOptions {
@@ -186,6 +192,27 @@ func (app *Node) PrintInfo(optionsJson []byte) error {
 		nodeTable.AppendRow(table.Row{"Bootstrapped", nodeInfo.Bootstrapped})
 		nodeTable.AppendRow(table.Row{"Sync State", nodeInfo.SyncState})
 		nodeTable.AppendRow(table.Row{"Connections", nodeInfo.Connections})
+	}
+
+	if infoCollectionOptions.All() || infoCollectionOptions.Simple || infoCollectionOptions.Keys {
+		nodeTable.AppendSeparator()
+		nodeTable.AppendRow(table.Row{"Baking Keys", "Baking Keys"}, table.RowConfig{AutoMerge: true})
+		nodeTable.AppendSeparator()
+		nodeTable.AppendRow(table.Row{"Name", "Address"})
+		nodeTable.AppendSeparator()
+
+		if len(nodeInfo.AdditionalBakingKeys) == 0 {
+			nodeTable.AppendRow(table.Row{"N/A", "N/A"})
+		} else {
+			bakingKeyNames := make([]string, 0, len(nodeInfo.AdditionalBakingKeys))
+			for name := range nodeInfo.AdditionalBakingKeys {
+				bakingKeyNames = append(bakingKeyNames, name)
+			}
+			sort.Strings(bakingKeyNames)
+			for _, name := range bakingKeyNames {
+				nodeTable.AppendRow(table.Row{name, nodeInfo.AdditionalBakingKeys[name]})
+			}
+		}
 	}
 
 	if chainInfo := nodeInfo.ChainHead; infoCollectionOptions.All() || infoCollectionOptions.Chain {
