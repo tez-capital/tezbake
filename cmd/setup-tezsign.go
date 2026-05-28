@@ -96,7 +96,14 @@ var setupTezsignCmd = &cobra.Command{
 		if (shouldOperateOnNode || !isAnySelected) && apps.Node.IsInstalled() && tezsignImportKeyFlag.IsTrue() { // node only imports key
 			log.Info("Importing key to the node...")
 
-			isSignerRunning, _ := apps.Signer.IsServiceStatus(constants.SignerAppServiceId, "running")
+			backend, _ := apps.Signer.GetBackend()
+			signerServiceId := constants.SignerAppServiceId
+			switch backend {
+			case constants.TezsignAppServiceId:
+				signerServiceId = constants.TezsignAppServiceId
+			}
+
+			isSignerRunning, _ := apps.Signer.IsServiceStatus(signerServiceId, "running")
 			util.AssertBE(isSignerRunning, "Signer is not running. Please start signer services.", constants.ExitSignerNotOperational)
 
 			bakerAddr, exitCode, err := apps.Signer.GetKeyHash(keyAlias)
