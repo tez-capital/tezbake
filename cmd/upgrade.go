@@ -61,6 +61,6 @@ func init() {
 
 	upgradeCmd.Flags().BoolP(UpgradeStorage, "s", false, "Upgrade storage during the upgrade.")
 	upgradeCmd.Flags().Bool(SkipAmiSetup, false, "Skip ami upgrade")
-	upgradeCmd.Flags().String(Branch, "main", "Select package release branch you want to upgrade.")
+	upgradeCmd.Flags().String(Branch, "", "Select package release branch you want to upgrade.")
 	RootCmd.AddCommand(upgradeCmd)
 }
