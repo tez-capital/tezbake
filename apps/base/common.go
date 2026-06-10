@@ -9,6 +9,7 @@ import (
 	"github.com/hjson/hjson-go/v4"
 	"github.com/tez-capital/tezbake/ami"
 	"github.com/tez-capital/tezbake/cli"
+	"github.com/tez-capital/tezbake/constants"
 	"github.com/tez-capital/tezbake/util"
 )
 
@@ -66,16 +67,73 @@ func tryConvertGitHubContentURL(url string) string {
 	return result
 }
 
+func setTypeBranchAndVersion(appDef map[string]any, branch string, version string) (hasChanged bool) {
+	typeMap, ok := appDef["type"].(map[string]any)
+	if !ok {
+		typeMap = make(map[string]any)
+		appDef["type"] = typeMap
+	}
+
+	if version != "" {
+		origVersion, _ := typeMap["version"].(string)
+		if origVersion != version {
+			typeMap["version"] = version
+			hasChanged = true
+		}
+	}
+
+	if branch != "" {
+		origID, _ := typeMap["id"].(string)
+
+		baseID := origID
+		if parts := strings.Split(origID, "."); len(parts) > 2 {
+			baseID = strings.Join(parts[:len(parts)-1], ".")
+		}
+
+		var newID string
+		if branch == "main" {
+			newID = baseID
+		} else {
+			newID = fmt.Sprintf("%s.%s", baseID, branch)
+		}
+
+		if origID != newID {
+			typeMap["id"] = newID
+			hasChanged = true
+		}
+	}
+
+	return hasChanged
+}
+
+func UpdateAppDefinitionBranch(appDir string, branch string, version string) error {
+	if branch == "" && version == "" {
+		return nil
+	}
+
+	appDef, err := ami.ReadAppDefinition(appDir, constants.DefaultAppJsonName)
+	if err != nil {
+		return fmt.Errorf("failed to read app definition: %w", err)
+	}
+
+	if hasChanged := setTypeBranchAndVersion(appDef, branch, version); !hasChanged {
+		return nil
+	}
+
+	err = ami.WriteAppDefinition(appDir, appDef, constants.DefaultAppJsonName)
+	if err != nil {
+		return fmt.Errorf("failed to write app definition: %w", err)
+	}
+
+	return nil
+}
+
 func GenerateConfiguration(template map[string]any, ctx *SetupContext) (map[string]any, error) {
 	appDef := template
 
 	appDef["id"] = fmt.Sprintf("%s-%s", cli.BBInstanceId, appDef["id"])
 	appDef["user"] = ctx.User
-	appDef["type"].(map[string]any)["version"] = ctx.Version
-
-	if ctx.Branch != "main" && ctx.Branch != "" {
-		appDef["type"].(map[string]any)["id"] = fmt.Sprintf("%s.%s", appDef["type"].(map[string]any)["id"], ctx.Branch)
-	}
+	setTypeBranchAndVersion(appDef, ctx.Branch, ctx.Version)
 
 	appConfiguration := appDef["configuration"].(map[string]any)
 	appCtxConfiguration := make(map[string]any)

@@ -14,6 +14,11 @@ func (app *Peak) Upgrade(ctx *base.UpgradeContext, args ...string) (int, error) 
 			return exitcode, err
 		}
 	}
+	err := base.UpdateAppDefinitionBranch(app.GetPath(), ctx.Branch, ctx.Version)
+	if err != nil {
+		return -1, err
+	}
+
 	exitCode, err := ami.SetupApp(app.GetPath(), args...)
 	if wasRunning {
 		exitcode, err := app.Start()

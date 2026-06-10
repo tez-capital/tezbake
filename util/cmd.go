@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"os"
 	"slices"
 
@@ -44,6 +45,14 @@ func GetCommandStringFlagSD(cmd *cobra.Command, flag string, def string) string 
 
 func GetCommandBoolFlagS(cmd *cobra.Command, flag string) bool {
 	value, _ := cmd.Flags().GetBool(flag)
+	return value
+}
+
+func GetAppCommandStringFlagS(cmd *cobra.Command, appId string, suffix string, globalFlag string) string {
+	value := GetCommandStringFlagS(cmd, fmt.Sprintf("%s-%s", appId, suffix))
+	if value == "" && globalFlag != "" {
+		value = GetCommandStringFlagS(cmd, globalFlag)
+	}
 	return value
 }
 

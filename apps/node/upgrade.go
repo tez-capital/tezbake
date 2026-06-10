@@ -31,6 +31,11 @@ func (app *Node) Upgrade(ctx *base.UpgradeContext, args ...string) (int, error) 
 			return exitCode, err
 		}
 	}
+	err := base.UpdateAppDefinitionBranch(app.GetPath(), ctx.Branch, ctx.Version)
+	if err != nil {
+		return -1, err
+	}
+
 	exitCode, err := ami.SetupApp(app.GetPath(), args...)
 	if err != nil {
 		return exitCode, err

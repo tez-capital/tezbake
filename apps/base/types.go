@@ -64,5 +64,7 @@ type BBInstanceVersions struct {
 }
 
 type UpgradeContext struct {
-	UpgradeStorage bool `json:"upgrade-storage,omitempty"`
+	UpgradeStorage bool   `json:"upgrade-storage,omitempty"`
+	Branch         string
+	Version        string
 }
