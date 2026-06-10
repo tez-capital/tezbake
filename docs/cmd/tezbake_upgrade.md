@@ -13,7 +13,7 @@ tezbake upgrade [flags]
 ### Options
 
 ```
-      --branch string           Select package release branch you want to upgrade. (default "main")
+      --branch string           Select package release branch you want to upgrade.
       --dal                     Upgrade dal.
       --dal-branch string       Sets dal branch.
       --dal-version string      Sets dal version.
