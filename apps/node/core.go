@@ -38,17 +38,16 @@ func FromPath(path string) *Node {
 	}
 }
 
-func (app *Node) GetPath() string {
+func (app *Node) GetLocalPath() string {
 	appPath := path.Join(cli.BBdir, Id)
 	if app.Path != "" {
 		appPath = path.Join(app.Path, Id)
 	}
-
-	if isRemote, locator := ami.IsRemoteApp(appPath); isRemote {
-		return path.Join(locator.InstancePath, locator.App)
-	}
-
 	return appPath
+}
+
+func (app *Node) GetPath() string {
+	return app.GetLocalPath()
 }
 
 func (app *Node) GetId() string {
@@ -56,7 +55,7 @@ func (app *Node) GetId() string {
 }
 
 func (app *Node) GetUser() string {
-	if isRemote, locator := ami.IsRemoteApp(app.GetPath()); isRemote {
+	if isRemote, locator := ami.IsRemoteApp(app.GetLocalPath()); isRemote {
 		return locator.LocalUsername
 	}
 
@@ -72,7 +71,7 @@ func (app *Node) GetUser() string {
 }
 
 func (app *Node) GetLabel() string {
-	if isRemote, locator := ami.IsRemoteApp(app.GetPath()); isRemote {
+	if isRemote, locator := ami.IsRemoteApp(app.GetLocalPath()); isRemote {
 		return strings.ToUpper(fmt.Sprintf("%s (REMOTE - %s:%s)", app.GetId(), locator.Host, locator.Port))
 	}
 	return strings.ToUpper(app.GetId())
@@ -83,12 +82,12 @@ func (app *Node) GetAmiTemplate(ctx *base.SetupContext) map[string]any {
 }
 
 func (app *Node) IsRemoteApp() bool {
-	isRemote, _ := ami.IsRemoteApp(app.GetPath())
+	isRemote, _ := ami.IsRemoteApp(app.GetLocalPath())
 	return isRemote
 }
 
 func (app *Node) IsInstalled() bool {
-	return ami.IsAppInstalled(app.GetPath())
+	return ami.IsAppInstalled(app.GetLocalPath())
 }
 
 func (app *Node) SupportsRemote() bool {

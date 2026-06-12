@@ -1,12 +1,14 @@
 package ami
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -100,6 +102,10 @@ func (config *RemoteConfiguration) ToSshConnectionDetails() *system.SshConnectio
 		Host:     config.Host,
 		Port:     config.Port,
 	}
+}
+
+func (config *RemoteConfiguration) GetRemoteAppPath() string {
+	return path.Join(config.InstancePath, config.App)
 }
 
 func (config *RemoteConfiguration) GetElevationCredentials() (*RemoteElevateCredentials, error) {
@@ -620,18 +626,58 @@ func (session *TezbakeRemoteSession) ForwardAmiExecuteWithOutputChannel(workingD
 	return result.ExitCode, result.Error
 }
 
-func (session *TezbakeRemoteSession) writeFileToRemote(fullPath string, content []byte, mode os.FileMode) error {
+func (session *TezbakeRemoteSession) writeReaderToRemote(fullPath string, src io.Reader, mode os.FileMode) error {
 	file, err := session.sftpSession.OpenFile(fullPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	_, err = file.Write(content)
-	if err != nil {
+	if _, err := io.Copy(file, src); err != nil {
 		return err
 	}
 
-	err = file.Chmod(mode)
+	return file.Chmod(mode)
+}
+
+func (session *TezbakeRemoteSession) writeFileToRemote(fullPath string, content []byte, mode os.FileMode) error {
+	return session.writeReaderToRemote(fullPath, bytes.NewReader(content), mode)
+}
+
+func (session *TezbakeRemoteSession) UploadFile(localPath string, remotePath string, mode os.FileMode) error {
+	src, err := os.Open(localPath)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	return session.writeReaderToRemote(remotePath, src, mode)
+}
+
+func (session *TezbakeRemoteSession) DownloadFile(remotePath string, localPath string, mode os.FileMode) error {
+	src, err := session.sftpSession.Open(remotePath)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	dst, err := os.OpenFile(localPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, src); err != nil {
+		return err
+	}
+
+	return dst.Chmod(mode)
+}
+
+func (session *TezbakeRemoteSession) RemoveRemoteFile(remotePath string) error {
+	err := session.sftpSession.Remove(remotePath)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
 	return err
 }

@@ -256,9 +256,10 @@ func (m bootstrapModel) View() string {
 				style = constants.StyleSelected
 			}
 			desc := ""
-			if mode == "rolling" {
+			switch mode {
+			case "rolling":
 				desc = constants.StyleDim.Render(" - smaller, recent history only")
-			} else if mode == "full" {
+			case "full":
 				desc = constants.StyleDim.Render(" - complete block history")
 			}
 			s.WriteString(fmt.Sprintf("%s%s%s\n", cursor, style.Render(mode), desc))

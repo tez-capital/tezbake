@@ -51,6 +51,6 @@ func init() {
 	executeAmiCmd.Flags().Bool("elevate", false, "elevate before execution")
 	executeAmiCmd.Flags().String("app", "", "Path to application directory")
 	executeAmiCmd.Flags().String("args", "", "arguments to pass to the command")
-	executeAmiCmd.Flags().String("base64-args", "", "basse64 encoded arguments to pass to the command")
+	executeAmiCmd.Flags().String("base64-args", "", "base64 encoded arguments to pass to the command")
 	RootCmd.AddCommand(executeAmiCmd)
 }

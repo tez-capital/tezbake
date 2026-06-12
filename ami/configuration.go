@@ -220,6 +220,21 @@ func WriteAppDefinition(workingDir string, configuration map[string]any, appConf
 	return os.Rename(newAppDefPath, appDefPath)
 }
 
+func EnsureRemoteAppDirectory(locator *RemoteConfiguration) error {
+	session, err := locator.OpenAppRemoteSession()
+	if err != nil {
+		return err
+	}
+	defer session.Close()
+
+	credentials, err := locator.GetElevationCredentials()
+	if err != nil {
+		return err
+	}
+
+	return prepareFolderStructure(session.sshClient, locator.InstancePath, locator.App, locator.Username, credentials.ToEnvMap())
+}
+
 func ReadAppDefinition(workingDir string, appConfigPath string) (map[string]any, error) {
 	if isRemote, locator := IsRemoteApp(workingDir); isRemote {
 		session, err := locator.OpenAppRemoteSession()

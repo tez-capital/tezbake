@@ -33,6 +33,17 @@ func ExecuteRaw(args ...string) (int, error) {
 	return 0, nil
 }
 
+func applyExistingWorkingDir(proc *exec.Cmd, workingDir string) {
+	if proc == nil || workingDir == "" {
+		return
+	}
+
+	info, err := os.Stat(workingDir)
+	if err == nil && info.IsDir() {
+		proc.Dir = workingDir
+	}
+}
+
 func createAmiCmd(workingDir string, args ...string) (*exec.Cmd, error) {
 	eliPath, amiPath, err := GetEliAndAmiPath()
 	if err != nil {
@@ -45,7 +56,9 @@ func createAmiCmd(workingDir string, args ...string) (*exec.Cmd, error) {
 	eliArgs = append(eliArgs, "--path="+workingDir)
 	eliArgs = append(eliArgs, args...)
 
-	return exec.Command(eliPath, eliArgs...), nil
+	proc := exec.Command(eliPath, eliArgs...)
+	applyExistingWorkingDir(proc, workingDir)
+	return proc, nil
 }
 
 func runAmiCmd(workingDir string, args ...string) (exitCode int, err error) {

@@ -28,9 +28,10 @@ type SetupContext struct {
 
 func (ctx *SetupContext) ToRemoteConfiguration(app BakeBuddyApp) *ami.RemoteConfiguration {
 	connectionDetails := system.GetRemoteConnectionDetails(ctx.Remote)
+	localAppPath := app.GetLocalPath()
 
 	return &ami.RemoteConfiguration{
-		ElevationCredentialsDirectory: app.GetPath(),
+		ElevationCredentialsDirectory: localAppPath,
 		App:                           app.GetId(),
 		Username:                      connectionDetails.Username,
 		LocalUsername:                 ctx.User,
@@ -38,8 +39,8 @@ func (ctx *SetupContext) ToRemoteConfiguration(app BakeBuddyApp) *ami.RemoteConf
 		Port:                          connectionDetails.Port,
 		InstancePath:                  constants.DefaultBBDirectory,
 		Elevate:                       ctx.RemoteElevate,
-		PrivateKey:                    path.Join(app.GetPath(), constants.PrivateKeyFile),
-		PublicKey:                     path.Join(app.GetPath(), constants.PublicKeyFile),
+		PrivateKey:                    path.Join(localAppPath, constants.PrivateKeyFile),
+		PublicKey:                     path.Join(localAppPath, constants.PublicKeyFile),
 	}
 }
 

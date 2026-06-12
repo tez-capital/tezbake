@@ -38,11 +38,15 @@ func (app *Peak) GetAmiTemplate(ctx *base.SetupContext) map[string]any {
 	return AMI_TEMPLATE
 }
 
-func (app *Peak) GetPath() string {
+func (app *Peak) GetLocalPath() string {
 	if app.Path != "" {
 		return app.Path
 	}
 	return path.Join(cli.BBdir, Id)
+}
+
+func (app *Peak) GetPath() string {
+	return app.GetLocalPath()
 }
 
 func (app *Peak) GetId() string {
@@ -54,7 +58,7 @@ func (app *Peak) GetLabel() string {
 }
 
 func (app *Peak) IsInstalled() bool {
-	return ami.IsAppInstalled(app.GetPath())
+	return ami.IsAppInstalled(app.GetLocalPath())
 }
 
 func (app *Peak) SupportsRemote() bool {

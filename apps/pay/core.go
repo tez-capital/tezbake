@@ -34,11 +34,15 @@ func FromPath(path string) *Tezpay {
 	}
 }
 
-func (app *Tezpay) GetPath() string {
+func (app *Tezpay) GetLocalPath() string {
 	if app.Path != "" {
 		return app.Path
 	}
 	return path.Join(cli.BBdir, Id)
+}
+
+func (app *Tezpay) GetPath() string {
+	return app.GetLocalPath()
 }
 
 func (app *Tezpay) GetId() string {
@@ -53,7 +57,7 @@ func (app *Tezpay) GetAmiTemplate(ctx *base.SetupContext) map[string]any {
 	return AMI_TEMPLATE
 }
 func (app *Tezpay) IsInstalled() bool {
-	return ami.IsAppInstalled(app.GetPath())
+	return ami.IsAppInstalled(app.GetLocalPath())
 }
 
 func (app *Tezpay) SupportsRemote() bool {
