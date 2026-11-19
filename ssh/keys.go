@@ -20,12 +20,12 @@ func GenerateBBKeys() *Ed25519KeyPair {
 	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
 	util.AssertE(err, "Failed to generate ed25519 key!")
 
-	privateKeyEncoded := marshalED25519PrivateKey(privateKey)
+	privateKeyEncoded, err := ssh.MarshalPrivateKey(privateKey, "")
 	util.AssertE(err, "Failed to serialize ed25519 key!")
 
 	return &Ed25519KeyPair{
 		PublicKey:  marshalAuthorizedPublicKey(publicKey),
-		PrivateKey: encodePrivateKeyToPEM(privateKeyEncoded),
+		PrivateKey: pem.EncodeToMemory(privateKeyEncoded),
 	}
 }
 
@@ -35,14 +35,6 @@ func marshalAuthorizedPublicKey(key ed25519.PublicKey) []byte {
 	publicKeySerialized := ssh.MarshalAuthorizedKey(publicKey)
 
 	return publicKeySerialized
-}
-
-func encodePrivateKeyToPEM(bytes []byte) []byte {
-	privatePEM := pem.EncodeToMemory(&pem.Block{
-		Type:  "OPENSSH PRIVATE KEY",
-		Bytes: bytes,
-	})
-	return privatePEM
 }
 
 func IsValidSSHPublicKey(bytes []byte) bool {

@@ -38,17 +38,16 @@ func FromPath(path string) *DalNode {
 	}
 }
 
-func (app *DalNode) GetPath() string {
+func (app *DalNode) GetLocalPath() string {
 	appPath := path.Join(cli.BBdir, Id)
 	if app.Path != "" {
 		appPath = path.Join(app.Path, Id)
 	}
-
-	if isRemote, locator := ami.IsRemoteApp(appPath); isRemote {
-		return path.Join(locator.InstancePath, locator.App)
-	}
-
 	return appPath
+}
+
+func (app *DalNode) GetPath() string {
+	return app.GetLocalPath()
 }
 
 func (app *DalNode) GetId() string {
@@ -56,7 +55,7 @@ func (app *DalNode) GetId() string {
 }
 
 func (app *DalNode) GetUser() string {
-	if isRemote, locator := ami.IsRemoteApp(app.GetPath()); isRemote {
+	if isRemote, locator := ami.IsRemoteApp(app.GetLocalPath()); isRemote {
 		return locator.LocalUsername
 	}
 
@@ -72,7 +71,7 @@ func (app *DalNode) GetUser() string {
 }
 
 func (app *DalNode) GetLabel() string {
-	if isRemote, locator := ami.IsRemoteApp(app.GetPath()); isRemote {
+	if isRemote, locator := ami.IsRemoteApp(app.GetLocalPath()); isRemote {
 		return strings.ToUpper(fmt.Sprintf("%s (REMOTE - %s:%s)", app.GetId(), locator.Host, locator.Port))
 	}
 	return strings.ToUpper(app.GetId())
@@ -83,12 +82,12 @@ func (app *DalNode) GetAmiTemplate(ctx *base.SetupContext) map[string]any {
 }
 
 func (app *DalNode) IsRemoteApp() bool {
-	isRemote, _ := ami.IsRemoteApp(app.GetPath())
+	isRemote, _ := ami.IsRemoteApp(app.GetLocalPath())
 	return isRemote
 }
 
 func (app *DalNode) IsInstalled() bool {
-	return ami.IsAppInstalled(app.GetPath())
+	return ami.IsAppInstalled(app.GetLocalPath())
 }
 
 func (app *DalNode) SupportsRemote() bool {

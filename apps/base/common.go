@@ -3,7 +3,7 @@ package base
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/hjson/hjson-go/v4"
@@ -15,14 +15,6 @@ import (
 
 type IAmiBasedApp interface {
 	GetPath() string
-}
-
-func GetUser(app IAmiBasedApp) string {
-	def, _, err := LoadAppDefinition(app)
-	if err != nil {
-		return ""
-	}
-	return def["user"].(string)
 }
 
 func LoadAppDefinition(app IAmiBasedApp) (map[string]any, string, error) {
@@ -48,11 +40,6 @@ func GetActiveModel(app IAmiBasedApp) (map[string]any, error) {
 	return ami.GetAppActiveModel(app.GetPath())
 }
 
-type BakeBuddyAppDefinition struct {
-	Id      string
-	Control BakeBuddyApp
-}
-
 // try to a dumb conversion
 // https://github.com/tez-capital/xtz.configs/blob/main/seoulnet.json
 // to
@@ -68,9 +55,16 @@ func tryConvertGitHubContentURL(url string) string {
 }
 
 func setTypeBranchAndVersion(appDef map[string]any, branch string, version string) (hasChanged bool) {
+	if branch == "" && version == "" {
+		return false
+	}
 	typeMap, ok := appDef["type"].(map[string]any)
 	if !ok {
 		typeMap = make(map[string]any)
+		if id, ok := appDef["type"].(string); ok {
+			typeMap["id"] = id
+			typeMap["version"] = "latest"
+		}
 		appDef["type"] = typeMap
 	}
 
@@ -142,15 +136,18 @@ func GenerateConfiguration(template map[string]any, ctx *SetupContext) (map[stri
 	case ctx.Configuration == "":
 		return appDef, nil
 	case util.IsValidUrl(ctx.Configuration):
-		tmpConfigurationFile := path.Join(os.TempDir(), "bb-configuration")
+		temporary, err := os.MkdirTemp("", "bb-configuration-*")
+		if err != nil {
+			return appDef, err
+		}
+		defer os.RemoveAll(temporary)
+		tmpConfigurationFile := filepath.Join(temporary, "config.json")
 
-		err := util.DownloadFile(tryConvertGitHubContentURL(ctx.Configuration), tmpConfigurationFile, false)
+		err = util.DownloadFile(tryConvertGitHubContentURL(ctx.Configuration), tmpConfigurationFile, false)
 		if err != nil {
 			return appDef, fmt.Errorf("failed to download configuration file - %s", ctx.Configuration)
 		}
-		ctx.Configuration = tmpConfigurationFile
-
-		configurationFileJson, err := os.ReadFile(ctx.Configuration)
+		configurationFileJson, err := os.ReadFile(tmpConfigurationFile)
 		if err != nil {
 			return appDef, fmt.Errorf("invalid configuration - %s (%s)", ctx.Configuration, err.Error())
 		}

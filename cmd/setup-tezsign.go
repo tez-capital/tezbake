@@ -45,7 +45,7 @@ var setupTezsignCmd = &cobra.Command{
 
 		if tezsignImportKeyFlag.IsTrue() { // tezsign import requires signer to be running
 			log.Info("ensuring signer is running for tezsign key import...")
-			wasRunning, _ := apps.Signer.IsServiceStatus(constants.TezpayAppServiceId, "running")
+			wasRunning, _ := apps.Signer.IsServiceStatus(getSignerServiceID(), "running")
 			if !wasRunning {
 				system.RequireElevatedUser() // starting signer service requires elevated permissions
 				exitCode, err := apps.Signer.Start()
@@ -96,14 +96,7 @@ var setupTezsignCmd = &cobra.Command{
 		if (shouldOperateOnNode || !isAnySelected) && apps.Node.IsInstalled() && tezsignImportKeyFlag.IsTrue() { // node only imports key
 			log.Info("Importing key to the node...")
 
-			backend, _ := apps.Signer.GetBackend()
-			signerServiceId := constants.SignerAppServiceId
-			switch backend {
-			case constants.TezsignAppServiceId:
-				signerServiceId = constants.TezsignAppServiceId
-			}
-
-			isSignerRunning, _ := apps.Signer.IsServiceStatus(signerServiceId, "running")
+			isSignerRunning, _ := apps.Signer.IsServiceStatus(getSignerServiceID(), "running")
 			util.AssertBE(isSignerRunning, "Signer is not running. Please start signer services.", constants.ExitSignerNotOperational)
 
 			bakerAddr, exitCode, err := apps.Signer.GetKeyHash(keyAlias)
@@ -119,6 +112,14 @@ var setupTezsignCmd = &cobra.Command{
 
 		}
 	},
+}
+
+func getSignerServiceID() string {
+	backend, _ := apps.Signer.GetBackend()
+	if backend == constants.TezsignAppServiceId {
+		return constants.TezsignAppServiceId
+	}
+	return constants.SignerAppServiceId
 }
 
 func init() {

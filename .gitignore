@@ -13,3 +13,5 @@ server/*
 
 # for experiments
 exp.go
+# AMI cache fallback when run without AMI_CACHE as non-root
+.ami-cache/

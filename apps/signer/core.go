@@ -50,11 +50,15 @@ func (app *Signer) GetAmiTemplate(ctx *base.SetupContext) map[string]any {
 	return AMI_TEMPLATE
 }
 
-func (app *Signer) GetPath() string {
+func (app *Signer) GetLocalPath() string {
 	if app.Path != "" {
 		return app.Path
 	}
 	return path.Join(cli.BBdir, Id)
+}
+
+func (app *Signer) GetPath() string {
+	return app.GetLocalPath()
 }
 
 func (app *Signer) GetId() string {
@@ -66,7 +70,7 @@ func (app *Signer) GetLabel() string {
 }
 
 func (app *Signer) IsInstalled() bool {
-	return ami.IsAppInstalled(app.GetPath())
+	return ami.IsAppInstalled(app.GetLocalPath())
 }
 
 func (app *Signer) SupportsRemote() bool {

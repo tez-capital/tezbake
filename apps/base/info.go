@@ -21,13 +21,8 @@ func GenerateFailedInfo(output string, err error) InfoBase {
 }
 
 func ParseInfoOutput[TInfo any](infoBytes []byte) (TInfo, error) {
-	info := string(infoBytes)
-	lines := strings.Split(info, "\n")
-	i := len(lines) - 1
-	for strings.TrimSpace(lines[i]) == "" {
-		i--
-	}
-	info = lines[i]
+	lines := strings.Split(strings.TrimSpace(string(infoBytes)), "\n")
+	info := lines[len(lines)-1]
 
 	var result TInfo
 	err := json.Unmarshal([]byte(info), &result)

@@ -1,6 +1,8 @@
 package base
 
-import "github.com/tez-capital/tezbake/ami"
+import (
+	"github.com/tez-capital/tezbake/ami"
+)
 
 const (
 	MergingSetupKind     = "merge"
@@ -11,6 +13,7 @@ type BakeBuddyApp interface {
 	GetId() string
 	GetLabel() string
 	GetPath() string
+	GetLocalPath() string
 	IsRemoteApp() bool
 	Execute(args ...string) (int, error)
 	GetAmiTemplate(ctx *SetupContext) map[string]any
@@ -28,6 +31,12 @@ type BakeBuddyApp interface {
 	GetVersions(options ami.CollectVersionsOptions) (*ami.InstanceVersions, error)
 	GetVersion() (string, error)
 	IsInstalled() bool
+	Pack(ctx *PackContext, output string) (int, error)
+	Unpack(source string) (int, error)
+}
+
+type PackContext struct {
+	Mode string `json:"mode,omitempty"`
 }
 
 type AmiInfoCollectionOption struct {
@@ -64,7 +73,7 @@ type BBInstanceVersions struct {
 }
 
 type UpgradeContext struct {
-	UpgradeStorage bool   `json:"upgrade-storage,omitempty"`
+	UpgradeStorage bool `json:"upgrade-storage,omitempty"`
 	Branch         string
 	Version        string
 }

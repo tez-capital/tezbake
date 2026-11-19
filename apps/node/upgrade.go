@@ -21,7 +21,9 @@ func (app *Node) UpgradeStorage() (int, error) {
 func (app *Node) Upgrade(ctx *base.UpgradeContext, args ...string) (int, error) {
 	isRemote, locator := ami.IsRemoteApp(app.GetPath())
 	if isRemote {
-		ami.PrepareRemote(app.GetPath(), locator, system.SSH_MODE_KEY)
+		if err := ami.PrepareRemote(app.GetPath(), locator, system.SSH_MODE_KEY); err != nil {
+			return -1, err
+		}
 	}
 
 	wasRunning, _ := app.IsAnyServiceStatus("running")

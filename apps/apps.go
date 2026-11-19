@@ -50,6 +50,15 @@ func GetInstalledApps(cmd *cobra.Command) []base.BakeBuddyApp {
 	return result
 }
 
+func FromId(id string) (base.BakeBuddyApp, bool) {
+	for _, app := range All {
+		if app.GetId() == id {
+			return app, true
+		}
+	}
+	return nil, false
+}
+
 func NodeFromPath(path string) *node.Node {
 	return node.FromPath(path)
 }

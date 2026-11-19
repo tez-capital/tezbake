@@ -55,6 +55,32 @@ func RemoveApp(app string, all bool, args ...string) (int, error) {
 }
 
 func IsAppInstalled(app string) bool {
+	installed, _ := IsAppInstalledS(app)
+	return installed
+}
+
+// IsAppInstalledS distinguishes an absent app from an execution or remote configuration failure.
+func IsAppInstalledS(app string) (bool, error) {
+	if _, err := os.Stat(app); err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
 	output, exitCode, err := ExecuteGetOutput(app, "--is-app-installed")
-	return err == nil && exitCode == 0 && strings.Contains(output, "true")
+	if exitCode == 2 { // AMI's EXIT_NOT_INSTALLED.
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if exitCode != 0 {
+		return false, fmt.Errorf("installation check exited with code %d", exitCode)
+	}
+	for _, line := range strings.Split(output, "\n") {
+		if strings.TrimSpace(line) == "true" {
+			return true, nil
+		}
+	}
+	return false, fmt.Errorf("unexpected installation check output: %s", strings.TrimSpace(output))
 }

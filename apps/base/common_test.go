@@ -1,6 +1,9 @@
 package base
 
 import (
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -15,6 +18,27 @@ func TestSetTypeBranchAndVersion(t *testing.T) {
 		expected map[string]any
 		changed  bool
 	}{
+		{
+			name:     "preserves shorthand type when setting branch",
+			appDef:   map[string]any{"type": "xtz.node"},
+			branch:   "testnet",
+			expected: map[string]any{"type": map[string]any{"id": "xtz.node.testnet", "version": "latest"}},
+			changed:  true,
+		},
+		{
+			name:     "preserves shorthand type when setting version",
+			appDef:   map[string]any{"type": "xtz.signer"},
+			version:  "v2.0",
+			expected: map[string]any{"type": map[string]any{"id": "xtz.signer", "version": "v2.0"}},
+			changed:  true,
+		},
+		{
+			name:     "returns shorthand type to main",
+			appDef:   map[string]any{"type": "xtz.node.oldnet"},
+			branch:   "main",
+			expected: map[string]any{"type": map[string]any{"id": "xtz.node", "version": "latest"}},
+			changed:  true,
+		},
 		{
 			name:   "sets branch on base type id",
 			branch: "seoulnet",
@@ -130,6 +154,47 @@ func TestSetTypeBranchAndVersion(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestGenerateConfigurationDownloadUsesPrivateTemporaryDirectory(t *testing.T) {
+	temporary := t.TempDir()
+	t.Setenv("TMPDIR", temporary)
+	target := filepath.Join(temporary, "unrelated-file")
+	if err := os.WriteFile(target, []byte("keep"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, filepath.Join(temporary, "bb-configuration")); err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/invalid" {
+			io.WriteString(w, "{invalid")
+			return
+		}
+		io.WriteString(w, `{"NODE_TYPE":"baker"}`)
+	}))
+	defer server.Close()
+	for _, urlPath := range []string{"/valid", "/invalid"} {
+		ctx := &SetupContext{Configuration: server.URL + urlPath}
+		definition, err := GenerateConfiguration(map[string]any{"id": "node", "configuration": map[string]any{}}, ctx)
+		if (err == nil) != (urlPath == "/valid") {
+			t.Fatalf("%s: %v", urlPath, err)
+		}
+		if err == nil && definition["configuration"].(map[string]any)["NODE_TYPE"] != "baker" {
+			t.Fatal("downloaded configuration was not applied")
+		}
+		if ctx.Configuration != server.URL+urlPath {
+			t.Fatal("configuration URL was replaced by a temporary file path")
+		}
+		data, err := os.ReadFile(target)
+		if err != nil || string(data) != "keep" {
+			t.Fatalf("download overwrote unrelated file: %q, %v", data, err)
+		}
+		entries, err := os.ReadDir(temporary)
+		if err != nil || len(entries) != 2 {
+			t.Fatalf("temporary configuration was not removed: %v, %v", entries, err)
+		}
 	}
 }
 
