@@ -4,15 +4,15 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"fmt"
+	"io"
 	"net"
 	"os"
 	"strings"
-	"sync"
 
 	"github.com/tez-capital/tezbake/constants"
 	"github.com/tez-capital/tezbake/util"
 
+	"github.com/kballard/go-shellquote"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
@@ -122,8 +122,7 @@ func buildUpEnv(env *map[string]string) string {
 	result := ""
 	if env != nil {
 		for k, v := range *env {
-			escapedValue := fmt.Sprintf("%q", v)
-			result += fmt.Sprintf("export %s=%s;", k, escapedValue)
+			result += "export " + shellquote.Join(k+"="+v) + ";"
 		}
 	}
 	return result
@@ -190,13 +189,27 @@ func RunPipedSshCommand(client *ssh.Client, cmd string, env *map[string]string) 
 	}
 }
 
+// ForwardOutputLines streams complete lines without Scanner's 64 KiB token limit.
+func ForwardOutputLines(src io.Reader, outputChannel chan<- string) error {
+	reader := bufio.NewReader(src)
+	for {
+		line, err := reader.ReadString('\n')
+		if len(line) > 0 {
+			outputChannel <- strings.TrimSuffix(strings.TrimSuffix(line, "\n"), "\r")
+		}
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+	}
+}
+
 func RunSshCommandWithOutputChannel(client *ssh.Client, cmd string, env *map[string]string, outputChannel chan<- string) *SshCommandResult {
 	session, err := client.NewSession()
 	if err != nil {
-		return &SshCommandResult{
-			Error:    err,
-			ExitCode: -1,
-		}
+		return &SshCommandResult{Error: err, ExitCode: -1}
 	}
 	defer session.Close()
 	stdout, err := session.StdoutPipe()
@@ -207,43 +220,21 @@ func RunSshCommandWithOutputChannel(client *ssh.Client, cmd string, env *map[str
 	if err != nil {
 		return &SshCommandResult{Error: err, ExitCode: -1}
 	}
-
-	var wg sync.WaitGroup
-	// Increment the WaitGroup counter for each goroutine
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		// feed the output channel with the output of the command
-		scanner := bufio.NewScanner(stdout)
-		for scanner.Scan() {
-			// Send each line of output to the channel
-			outputChannel <- scanner.Text()
-		}
-	}()
-	go func() {
-		defer wg.Done()
-		// feed the output channel with the output of the command
-		scanner := bufio.NewScanner(stderr)
-		for scanner.Scan() {
-			// Send each line of output to the channel
-			outputChannel <- scanner.Text()
-		}
-	}()
-
-	cmd = buildUpEnv(env) + cmd
-
+	if err := session.Start(buildUpEnv(env) + cmd); err != nil {
+		return &SshCommandResult{Error: err, ExitCode: -1}
+	}
+	outputErrors := make(chan error, 2)
+	go func() { outputErrors <- ForwardOutputLines(stdout, outputChannel) }()
+	go func() { outputErrors <- ForwardOutputLines(stderr, outputChannel) }()
+	outputErr := errors.Join(<-outputErrors, <-outputErrors)
+	err = errors.Join(session.Wait(), outputErr)
 	exitCode := 0
-
-	err = session.Run(cmd)
 	if err != nil {
 		exitCode = -1
-		if exitErr, ok := err.(*ssh.ExitError); ok {
+		var exitErr *ssh.ExitError
+		if errors.As(err, &exitErr) {
 			exitCode = exitErr.ExitStatus()
 		}
 	}
-	wg.Wait()
-	return &SshCommandResult{
-		Error:    err,
-		ExitCode: exitCode,
-	}
+	return &SshCommandResult{Error: err, ExitCode: exitCode}
 }

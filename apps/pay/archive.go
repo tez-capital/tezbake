@@ -6,6 +6,6 @@ func (app *Tezpay) Pack(ctx *base.PackContext, output string) (int, error) {
 	return base.DefaultPack(app, ctx, output)
 }
 
-func (app *Tezpay) Unpack(ctx *base.UnpackContext, source string) (int, error) {
-	return base.DefaultUnpack(app, ctx, source)
+func (app *Tezpay) Unpack(source string) (int, error) {
+	return base.DefaultUnpack(app, source)
 }

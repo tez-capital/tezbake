@@ -49,7 +49,9 @@ var executeCmd = &cobra.Command{
 		c := exec.Command(name, arg...)
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
-		_ = c.Run()
+		if err := c.Run(); err != nil && c.ProcessState == nil {
+			log.Fatalf("Failed to execute command: %v", err)
+		}
 		os.Exit(c.ProcessState.ExitCode())
 	},
 }

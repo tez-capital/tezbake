@@ -1,8 +1,6 @@
 package base
 
 import (
-	"os"
-
 	"github.com/tez-capital/tezbake/ami"
 )
 
@@ -34,37 +32,11 @@ type BakeBuddyApp interface {
 	GetVersion() (string, error)
 	IsInstalled() bool
 	Pack(ctx *PackContext, output string) (int, error)
-	Unpack(ctx *UnpackContext, source string) (int, error)
+	Unpack(source string) (int, error)
 }
 
 type PackContext struct {
 	Mode string `json:"mode,omitempty"`
-}
-
-type RemoteBundleFile struct {
-	Data []byte
-	Mode os.FileMode
-}
-
-type RemoteBundle struct {
-	Locator *ami.RemoteConfiguration
-	Files   map[string]RemoteBundleFile
-}
-
-type RemoteUnpackOverride struct {
-	Remote        string
-	RemoteAuth    string
-	RemoteElevate ami.RemoteElevationKind
-	RemotePath    string
-}
-
-func (o RemoteUnpackOverride) Active() bool {
-	return o.Remote != "" || o.RemoteAuth != "" || o.RemoteElevate != "" || o.RemotePath != ""
-}
-
-type UnpackContext struct {
-	RemoteBundle   *RemoteBundle
-	RemoteOverride RemoteUnpackOverride
 }
 
 type AmiInfoCollectionOption struct {
@@ -102,4 +74,6 @@ type BBInstanceVersions struct {
 
 type UpgradeContext struct {
 	UpgradeStorage bool `json:"upgrade-storage,omitempty"`
+	Branch         string
+	Version        string
 }

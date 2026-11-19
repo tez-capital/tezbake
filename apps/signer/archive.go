@@ -6,6 +6,6 @@ func (app *Signer) Pack(ctx *base.PackContext, output string) (int, error) {
 	return base.DefaultPack(app, ctx, output)
 }
 
-func (app *Signer) Unpack(ctx *base.UnpackContext, source string) (int, error) {
-	return base.DefaultUnpack(app, ctx, source)
+func (app *Signer) Unpack(source string) (int, error) {
+	return base.DefaultUnpack(app, source, "REMOTE_NODE", "REMOTE_SSH_PORT", "REMOTE_SSH_KEY", "REMOTE_RPC_ENDPOINT")
 }

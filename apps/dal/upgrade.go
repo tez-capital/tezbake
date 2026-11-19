@@ -10,7 +10,9 @@ import (
 func (app *DalNode) Upgrade(ctx *base.UpgradeContext, args ...string) (int, error) {
 	isRemote, locator := ami.IsRemoteApp(app.GetPath())
 	if isRemote {
-		ami.PrepareRemote(app.GetPath(), locator, system.SSH_MODE_KEY)
+		if err := ami.PrepareRemote(app.GetPath(), locator, system.SSH_MODE_KEY); err != nil {
+			return -1, err
+		}
 	}
 
 	wasRunning, _ := app.IsAnyServiceStatus("running")
@@ -20,6 +22,11 @@ func (app *DalNode) Upgrade(ctx *base.UpgradeContext, args ...string) (int, erro
 			return exitCode, err
 		}
 	}
+	err := base.UpdateAppDefinitionBranch(app.GetPath(), ctx.Branch, ctx.Version)
+	if err != nil {
+		return -1, err
+	}
+
 	exitCode, err := ami.SetupApp(app.GetPath(), args...)
 	if err != nil {
 		return exitCode, err

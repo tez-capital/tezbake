@@ -32,24 +32,9 @@ func (app *DalNode) Setup(ctx *base.SetupContext, args ...string) (int, error) {
 		if err != nil {
 			return -1, fmt.Errorf("failed to create directory structure for remote node locator - %s", err.Error())
 		}
-		if !useExistingCredentials {
-			switch ctx.RemoteElevate {
-			case ami.REMOTE_ELEVATION_SU:
-				fallthrough
-			case ami.REMOTE_ELEVATION_SUDO:
-				remoteElevatePassword := util.RequirePasswordE("Enter password to use for elevation on dal remote:", "Remote elevate requires password!", constants.ExitInternalError)
-				ctx.RemoteElevatePassword = remoteElevatePassword
-
-				credentials := ctx.ToRemoteElevateCredentials()
-				config.ElevationCredentials = credentials
-				ami.WriteRemoteElevationCredentials(app.GetPath(), config, credentials)
-			}
-		}
-
-		locator = ami.WriteRemoteLocator(app.GetPath(), config, ctx.RemoteReset)
-		err = ami.PrepareRemote(app.GetPath(), config, ctx.RemoteAuth)
+		locator, err = base.ConfigureRemoteLocator(app.GetPath(), config, ctx.RemoteReset, !useExistingCredentials, ctx.RemoteAuth)
 		if err != nil {
-			return -1, fmt.Errorf("failed to create remote node locator - %s", err.Error())
+			return -1, fmt.Errorf("failed to create remote dal locator - %w", err)
 		}
 
 		// on remote we need to use locator username

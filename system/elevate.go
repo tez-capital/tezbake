@@ -4,7 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
-	"time"
+	"strings"
 
 	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
@@ -23,6 +23,15 @@ func isElevated() bool {
 	return user.Uid == "0"
 }
 
+// A completed sudo process carries the command's status, including nonzero exits.
+func runElevatedProcess(proc *exec.Cmd) (int, error) {
+	err := proc.Run()
+	if _, exited := err.(*exec.ExitError); err != nil && !exited {
+		return -1, err
+	}
+	return proc.ProcessState.ExitCode(), nil
+}
+
 func RequireElevatedUser(injectArgs ...string) {
 	cli.ElevationRequired = true
 	if isElevated() {
@@ -38,32 +47,6 @@ func RequireElevatedUser(injectArgs ...string) {
 	elevationPass := os.Getenv("ELEVATION_PASSWORD")
 	switch elevationKind {
 	case "sudo":
-		// test with exit 0
-		testArgs := make([]string, 0)
-		testArgs = append(testArgs, "-S", "-E", "--")
-		testArgs = append(testArgs, "sh", "-c", "exit 0")
-		testProc := exec.Command("sudo", testArgs...)
-		testSuccess := false
-		done := make(chan error, 1)
-		go func() {
-			testProc.Stdout = os.Stdout
-			testProc.Stderr = os.Stderr
-			testStdin, err := testProc.StdinPipe()
-			util.AssertEE(err, "Failed to access sudo stdin!", constants.ExitElevationRequired)
-			testStdin.Write([]byte(elevationPass + "\n"))
-			done <- testProc.Run()
-		}()
-
-		select {
-		case <-time.After(3 * time.Second):
-			log.Warn("Timeout occurred while testing sudo access")
-		case err := <-done:
-			util.AssertEE(err, "Failed to execute test sudo!", constants.ExitExternalError)
-			testSuccess = true
-		}
-
-		util.AssertBE(testSuccess, "Sudo access test failed!", constants.ExitElevationRequired)
-
 		sudoArgs := make([]string, 0)
 		sudoArgs = append(sudoArgs, "-S", "-E", "--")
 		sudoArgs = append(sudoArgs, os.Args...)
@@ -71,13 +54,11 @@ func RequireElevatedUser(injectArgs ...string) {
 		sudoProc := exec.Command("sudo", sudoArgs...)
 		sudoProc.Stdout = os.Stdout
 		sudoProc.Stderr = os.Stderr
-		sudoStdin, err := sudoProc.StdinPipe()
-		util.AssertEE(err, "Failed to access sudo stdin!", constants.ExitElevationRequired)
-		sudoStdin.Write([]byte(elevationPass + "\n"))
-		err = sudoProc.Run()
+		sudoProc.Stdin = strings.NewReader(elevationPass + "\n")
+		exitCode, err := runElevatedProcess(sudoProc)
 		util.AssertEE(err, "Failed to execute sudo!", constants.ExitExternalError)
 
-		os.Exit(sudoProc.ProcessState.ExitCode())
+		os.Exit(exitCode)
 	case "su":
 		os.Exit(constants.ExitNotSupported)
 	}
@@ -97,8 +78,8 @@ func RequireElevatedUser(injectArgs ...string) {
 	sudoProc.Stdout = os.Stdout
 	sudoProc.Stderr = os.Stderr
 	sudoProc.Stdin = os.Stdin
-	err = sudoProc.Run()
-	util.AssertBE(err == nil || sudoProc.ProcessState.ExitCode() != 1, "Failed to elevate!", constants.ExitElevationRequired)
+	exitCode, err := runElevatedProcess(sudoProc)
+	util.AssertEE(err, "Failed to elevate!", constants.ExitElevationRequired)
 
-	os.Exit(sudoProc.ProcessState.ExitCode())
+	os.Exit(exitCode)
 }

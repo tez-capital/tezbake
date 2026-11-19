@@ -1,12 +1,13 @@
 package ami
 
 import (
-	"bufio"
+	"errors"
 	"os"
 	"os/exec"
 	"strings"
 	"sync"
 
+	"github.com/tez-capital/tezbake/system"
 	"go.alis.is/common/log"
 )
 
@@ -33,17 +34,6 @@ func ExecuteRaw(args ...string) (int, error) {
 	return 0, nil
 }
 
-func applyExistingWorkingDir(proc *exec.Cmd, workingDir string) {
-	if proc == nil || workingDir == "" {
-		return
-	}
-
-	info, err := os.Stat(workingDir)
-	if err == nil && info.IsDir() {
-		proc.Dir = workingDir
-	}
-}
-
 func createAmiCmd(workingDir string, args ...string) (*exec.Cmd, error) {
 	eliPath, amiPath, err := GetEliAndAmiPath()
 	if err != nil {
@@ -56,9 +46,8 @@ func createAmiCmd(workingDir string, args ...string) (*exec.Cmd, error) {
 	eliArgs = append(eliArgs, "--path="+workingDir)
 	eliArgs = append(eliArgs, args...)
 
-	proc := exec.Command(eliPath, eliArgs...)
-	applyExistingWorkingDir(proc, workingDir)
-	return proc, nil
+	// AMI changes directory for --path; changing it here would resolve relative paths twice.
+	return exec.Command(eliPath, eliArgs...), nil
 }
 
 func runAmiCmd(workingDir string, args ...string) (exitCode int, err error) {
@@ -101,78 +90,73 @@ func runAmiCmdWithOutputChannel(workingDir string, outputChannel chan<- string, 
 		return -1, err
 	}
 
-	var wg sync.WaitGroup
-	// Increment the WaitGroup counter for each goroutine
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		// feed the output channel with the output of the command
-		scanner := bufio.NewScanner(stdout)
-		for scanner.Scan() {
-			// Send each line of output to the channel
-			outputChannel <- scanner.Text()
-		}
-	}()
-	go func() {
-		defer wg.Done()
-		// feed the output channel with the output of the command
-		scanner := bufio.NewScanner(stderr)
-		for scanner.Scan() {
-			// Send each line of output to the channel
-			outputChannel <- scanner.Text()
-		}
-	}()
-
-	err = proc.Start()
-	if err != nil {
+	if err := proc.Start(); err != nil {
 		return -1, err
 	}
-	wg.Wait()
+	outputErrors := make(chan error, 2)
+	go func() { outputErrors <- system.ForwardOutputLines(stdout, outputChannel) }()
+	go func() { outputErrors <- system.ForwardOutputLines(stderr, outputChannel) }()
+	outputErr := errors.Join(<-outputErrors, <-outputErrors)
 	err = proc.Wait()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
-			return exitError.ExitCode(), err
+			return exitError.ExitCode(), errors.Join(err, outputErr)
 		}
-		return -1, err
+		return -1, errors.Join(err, outputErr)
+	}
+	if outputErr != nil {
+		return -1, outputErr
 	}
 	return 0, nil
 }
 
 func Execute(workingDir string, args ...string) (exitCode int, err error) {
-	if isRemote, locator := IsRemoteApp(workingDir); isRemote {
+	locator, err := loadAppLocator(workingDir)
+	if err != nil && !errors.Is(err, ErrNotRemoteApp) {
+		return -1, err
+	}
+	if err == nil {
 		session, err := locator.OpenAppRemoteSession()
 		if err != nil {
 			return -1, err
 		}
 
 		defer session.Close()
-		return session.ForwardAmiExecute(workingDir, args...)
+		return session.ForwardAmiExecute(locator.GetRemoteAppPath(), args...)
 	}
 	return runAmiCmd(workingDir, args...)
 }
 
 func ExecuteWithOutputChannel(workingDir string, outputChannel chan<- string, args ...string) (exitCode int, err error) {
-	if isRemote, locator := IsRemoteApp(workingDir); isRemote {
+	locator, err := loadAppLocator(workingDir)
+	if err != nil && !errors.Is(err, ErrNotRemoteApp) {
+		return -1, err
+	}
+	if err == nil {
 		session, err := locator.OpenAppRemoteSession()
 		if err != nil {
 			return -1, err
 		}
 
 		defer session.Close()
-		return session.ForwardAmiExecuteWithOutputChannel(workingDir, outputChannel, args...)
+		return session.ForwardAmiExecuteWithOutputChannel(locator.GetRemoteAppPath(), outputChannel, args...)
 	}
 	return runAmiCmdWithOutputChannel(workingDir, outputChannel, args...)
 }
 
 func ExecuteGetOutput(workingDir string, args ...string) (output string, exitCode int, err error) {
-	if isRemote, locator := IsRemoteApp(workingDir); isRemote {
+	locator, err := loadAppLocator(workingDir)
+	if err != nil && !errors.Is(err, ErrNotRemoteApp) {
+		return "", -1, err
+	}
+	if err == nil {
 		session, err := locator.OpenAppRemoteSession()
 		if err != nil {
 			return "", -1, err
 		}
 
 		defer session.Close()
-		return session.ForwardAmiExecuteGetOutput(workingDir, args...)
+		return session.ForwardAmiExecuteGetOutput(locator.GetRemoteAppPath(), args...)
 	}
 
 	outputChannel := make(chan string)

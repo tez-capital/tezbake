@@ -96,10 +96,7 @@ var setupCmd = &cobra.Command{
 
 		for _, v := range appsToProcess {
 			appId := v.GetId()
-			branch := util.GetCommandStringFlagS(cmd, fmt.Sprintf("%s-branch", appId))
-			if branch == "" {
-				branch = util.GetCommandStringFlagS(cmd, Branch)
-			}
+			branch := util.GetAppCommandStringFlagS(cmd, appId, "branch", Branch)
 
 			ctx := &apps.SetupContext{
 				Configuration: util.GetCommandStringFlagS(cmd, fmt.Sprintf("%s-configuration", appId)),

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -16,15 +15,14 @@ import (
 )
 
 const (
-	PackModeFlag   = "mode"
-	PackOutputFlag = "output"
-	UnpackSrcFlag  = "source"
-
-	NodeRemotePath = "node-remote-path"
-	DalRemotePath  = "dal-remote-path"
+	PackModeFlag      = "mode"
+	PackOutputFlag    = "output"
+	UnpackSrcFlag     = "source"
+	UnpackConfirmFlag = "confirm"
 
 	tezbakePackFormatVersion = 1
 	tezbakePackMetadataFile  = "__tezbake_packed_metadata.json"
+	archiveSmallFileLimit    = 1 << 20
 )
 
 type tezbakePackedApp struct {
@@ -59,25 +57,22 @@ func hideFlagsInHelp(cmd *cobra.Command, flagNames ...string) {
 	})
 }
 
-func validatePackMode(mode string) (string, error) {
-	if err := base.ValidatePackMode(mode); err != nil {
-		return "", err
-	}
-	return mode, nil
-}
-
-func getInstalledAppsForPack() []base.BakeBuddyApp {
+func getInstalledAppsForPack() ([]base.BakeBuddyApp, error) {
 	result := make([]base.BakeBuddyApp, 0, len(apps.All))
 	for _, app := range apps.All {
-		if app.IsInstalled() {
+		installed, err := ami.IsAppInstalledS(app.GetLocalPath())
+		if err != nil {
+			return nil, fmt.Errorf("failed to check installation of app %s: %w", app.GetId(), err)
+		}
+		if installed {
 			result = append(result, app)
 		}
 	}
-	return result
+	return result, nil
 }
 
 func loadTezbakePackMetadata(reader *zip.Reader) (*tezbakePackMetadata, error) {
-	raw, _, err := readArchiveFile(reader, tezbakePackMetadataFile)
+	raw, _, err := readSmallArchiveFile(reader, tezbakePackMetadataFile)
 	if err != nil {
 		return nil, err
 	}
@@ -89,13 +84,16 @@ func loadTezbakePackMetadata(reader *zip.Reader) (*tezbakePackMetadata, error) {
 	if metadata.Version != tezbakePackFormatVersion {
 		return nil, fmt.Errorf("unsupported tezbake archive version %d", metadata.Version)
 	}
-	if _, err := validatePackMode(metadata.Mode); err != nil {
+	if err := base.ValidatePackMode(metadata.Mode); err != nil {
 		return nil, err
+	}
+	if len(metadata.Apps) == 0 {
+		return nil, fmt.Errorf("archive contains no apps")
 	}
 
 	seenApps := make(map[string]struct{}, len(metadata.Apps))
 	for _, app := range metadata.Apps {
-		if !isSupportedAppId(app.Id) {
+		if _, ok := apps.FromId(app.Id); !ok {
 			return nil, fmt.Errorf("unsupported app id %q in archive", app.Id)
 		}
 		if _, seen := seenApps[app.Id]; seen {
@@ -105,74 +103,6 @@ func loadTezbakePackMetadata(reader *zip.Reader) (*tezbakePackMetadata, error) {
 	}
 
 	return &metadata, nil
-}
-
-func addRemoteBundleToArchive(writer *zip.Writer, appId string, bundle *base.RemoteBundle) error {
-	if bundle == nil || bundle.Locator == nil {
-		return fmt.Errorf("missing remote locator")
-	}
-
-	locatorRaw, err := json.MarshalIndent(bundle.Locator, "", "\t")
-	if err != nil {
-		return err
-	}
-	if err := addBytesToArchive(writer, path.Join("remote", appId, ami.LocatorFile), locatorRaw, 0644); err != nil {
-		return err
-	}
-
-	for _, fileName := range base.RemoteBundleFiles {
-		if fileName == ami.LocatorFile {
-			continue
-		}
-
-		file, ok := bundle.Files[fileName]
-		if !ok {
-			continue
-		}
-		if err := addBytesToArchive(writer, path.Join("remote", appId, fileName), file.Data, file.Mode); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func loadArchivedRemoteBundle(reader *zip.Reader, appId string) (*base.RemoteBundle, error) {
-	locatorRaw, _, err := readArchiveFile(reader, path.Join("remote", appId, ami.LocatorFile))
-	if err != nil {
-		return nil, err
-	}
-
-	var locator ami.RemoteConfiguration
-	if err := json.Unmarshal(locatorRaw, &locator); err != nil {
-		return nil, err
-	}
-
-	bundle := &base.RemoteBundle{
-		Locator: &locator,
-		Files:   make(map[string]base.RemoteBundleFile),
-	}
-
-	for _, fileName := range base.RemoteBundleFiles {
-		if fileName == ami.LocatorFile {
-			continue
-		}
-
-		raw, mode, err := readArchiveFile(reader, path.Join("remote", appId, fileName))
-		if err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
-			return nil, err
-		}
-
-		bundle.Files[fileName] = base.RemoteBundleFile{
-			Data: raw,
-			Mode: mode,
-		}
-	}
-
-	return bundle, nil
 }
 
 func addFileToArchive(writer *zip.Writer, archivePath string, sourcePath string) error {
@@ -219,10 +149,13 @@ func addBytesToArchive(writer *zip.Writer, archivePath string, content []byte, m
 	return err
 }
 
-func readArchiveFile(reader *zip.Reader, archivePath string) ([]byte, os.FileMode, error) {
-	file := findArchiveFile(reader, archivePath)
-	if file == nil {
-		return nil, 0, os.ErrNotExist
+func readSmallArchiveFile(reader *zip.Reader, archivePath string) ([]byte, os.FileMode, error) {
+	file, err := findArchiveFile(reader, archivePath)
+	if err != nil {
+		return nil, 0, err
+	}
+	if file.UncompressedSize64 > archiveSmallFileLimit {
+		return nil, 0, fmt.Errorf("archive entry %s exceeds %d bytes", archivePath, archiveSmallFileLimit)
 	}
 
 	fileReader, err := file.Open()
@@ -231,31 +164,52 @@ func readArchiveFile(reader *zip.Reader, archivePath string) ([]byte, os.FileMod
 	}
 	defer fileReader.Close()
 
-	data, err := io.ReadAll(fileReader)
+	data, err := io.ReadAll(io.LimitReader(fileReader, archiveSmallFileLimit+1))
 	if err != nil {
 		return nil, 0, err
+	}
+	if len(data) > archiveSmallFileLimit {
+		return nil, 0, fmt.Errorf("archive entry %s exceeds %d bytes", archivePath, archiveSmallFileLimit)
 	}
 	return data, file.Mode(), nil
 }
 
 func extractArchiveFile(reader *zip.Reader, archivePath string, destination string, mode os.FileMode) error {
-	data, _, err := readArchiveFile(reader, archivePath)
+	file, err := findArchiveFile(reader, archivePath)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(destination, data, mode)
+	src, err := file.Open()
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+	dst, err := os.OpenFile(destination, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+	if _, err := io.Copy(dst, src); err != nil {
+		return err
+	}
+	return dst.Close()
 }
 
-func findArchiveFile(reader *zip.Reader, archivePath string) *zip.File {
+func findArchiveFile(reader *zip.Reader, archivePath string) (*zip.File, error) {
+	var found *zip.File
 	for _, file := range reader.File {
 		if file.Name == archivePath {
-			return file
+			if found != nil {
+				return nil, fmt.Errorf("duplicate archive entry %s", archivePath)
+			}
+			if !file.Mode().IsRegular() {
+				return nil, fmt.Errorf("archive entry %s is not a regular file", archivePath)
+			}
+			found = file
 		}
 	}
-	return nil
-}
-
-func isSupportedAppId(appId string) bool {
-	_, ok := apps.FromId(appId)
-	return ok
+	if found == nil {
+		return nil, os.ErrNotExist
+	}
+	return found, nil
 }
