@@ -18,6 +18,7 @@ import (
 	"slices"
 	"strings"
 	"sync/atomic"
+	"syscall"
 	"testing"
 
 	"github.com/kballard/go-shellquote"
@@ -497,6 +498,44 @@ func TestRunSshCommandRetriesWithElevationCredentials(t *testing.T) {
 	})
 	if calls != 2 || result.Error != nil || result.ExitCode != 0 {
 		t.Fatalf("elevation retry: calls=%d result=%v", calls, result)
+	}
+}
+
+func TestWriteFileAtomicKeepsOwner(t *testing.T) {
+	uid, gid := os.Geteuid(), -1
+	if uid == 0 {
+		uid, gid = 65534, 65534
+	} else {
+		// unprivileged: another of our own groups is the only owner we may hand a file to
+		groups, _ := os.Getgroups()
+		for _, group := range groups {
+			if group != os.Getegid() {
+				gid = group
+				break
+			}
+		}
+		if gid == -1 {
+			t.Skip("needs root or a supplementary group")
+		}
+	}
+	filePath := filepath.Join(t.TempDir(), constants.PrivateKeyFile)
+	writeTestFile(t, filePath, []byte("old key"), 0600)
+	if err := os.Chown(filePath, uid, gid); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteFileAtomic(filePath, []byte("new key"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(filePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	owner := info.Sys().(*syscall.Stat_t)
+	if int(owner.Uid) != uid || int(owner.Gid) != gid || info.Mode().Perm() != 0600 {
+		t.Fatalf("replacement owner %d:%d mode %v, want %d:%d 0600", owner.Uid, owner.Gid, info.Mode().Perm(), uid, gid)
+	}
+	if data, _ := os.ReadFile(filePath); string(data) != "new key" {
+		t.Fatalf("content not replaced: %q", data)
 	}
 }
 

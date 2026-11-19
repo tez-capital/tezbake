@@ -88,6 +88,10 @@ func packApps(output string, mode string, appsToPack []base.BakeBuddyApp) error 
 		if exitCode != 0 {
 			return fmt.Errorf("failed to pack app %s: ami pack exited with %d", app.GetId(), exitCode)
 		}
+		// the same check unpack runs, so a backup that cannot be restored fails now, not at restore time
+		if err := base.ValidateAppArchive(appArchivePath, app.GetId()); err != nil {
+			return fmt.Errorf("packed archive for %s cannot be restored: %w", app.GetId(), err)
+		}
 
 		if err := addFileToArchive(writer, path.Join("apps", app.GetId()+".zip"), appArchivePath); err != nil {
 			return err

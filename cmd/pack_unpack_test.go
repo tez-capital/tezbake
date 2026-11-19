@@ -67,9 +67,10 @@ func TestLoadTezbakePackMetadataRejectsEmptyArchive(t *testing.T) {
 
 type packTestApp struct {
 	base.BakeBuddyApp
-	dir    string
-	err    error
-	remote bool
+	dir          string
+	err          error
+	remote       bool
+	unrestorable bool
 }
 
 func (app packTestApp) GetId() string        { return "node" }
@@ -79,7 +80,30 @@ func (app packTestApp) Pack(_ *base.PackContext, output string) (int, error) {
 	if app.err != nil {
 		return 1, app.err
 	}
-	return 0, os.WriteFile(output, []byte("app archive"), 0600)
+	if app.unrestorable {
+		return 0, os.WriteFile(output, []byte("not an app archive"), 0600)
+	}
+	return 0, writeNodeAppArchive(output)
+}
+
+func TestPackRejectsUnrestorableAppArchive(t *testing.T) {
+	dir := t.TempDir()
+	output := filepath.Join(dir, "backup.zip")
+	previous := []byte("previous backup")
+	if err := os.WriteFile(output, previous, 0644); err != nil {
+		t.Fatal(err)
+	}
+	app := packTestApp{dir: t.TempDir(), unrestorable: true}
+	err := packApps(output, base.PackModeFull, []base.BakeBuddyApp{app})
+	if err == nil || !strings.Contains(err.Error(), "cannot be restored") {
+		t.Fatalf("expected an unrestorable app archive to fail pack, got %v", err)
+	}
+	if got, err := os.ReadFile(output); err != nil || !bytes.Equal(got, previous) {
+		t.Fatalf("previous backup changed: got %q, error %v", got, err)
+	}
+	if leftovers, _ := filepath.Glob(filepath.Join(dir, ".tezbake-pack-*")); len(leftovers) != 0 {
+		t.Fatalf("pack left temporary output behind: %v", leftovers)
+	}
 }
 
 func TestPackPreservesPreviousBackupOnFailure(t *testing.T) {

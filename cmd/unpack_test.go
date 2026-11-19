@@ -126,9 +126,17 @@ func TestUnpackRequiresDoubleBakeConfirmation(t *testing.T) {
 func writeTestNodeAppArchive(t *testing.T, root string) string {
 	t.Helper()
 	innerPath := filepath.Join(root, "node.zip")
-	inner, err := os.Create(innerPath)
-	if err != nil {
+	if err := writeNodeAppArchive(innerPath); err != nil {
 		t.Fatal(err)
+	}
+	return innerPath
+}
+
+// writeNodeAppArchive writes the smallest node app archive that ValidateAppArchive accepts.
+func writeNodeAppArchive(path string) error {
+	inner, err := os.Create(path)
+	if err != nil {
+		return err
 	}
 	zw := zip.NewWriter(inner)
 	for name, data := range map[string]string{
@@ -138,19 +146,13 @@ func writeTestNodeAppArchive(t *testing.T, root string) string {
 	} {
 		entry, err := zw.Create(name)
 		if err != nil {
-			t.Fatal(err)
+			return errors.Join(err, inner.Close())
 		}
 		if _, err = entry.Write([]byte(data)); err != nil {
-			t.Fatal(err)
+			return errors.Join(err, inner.Close())
 		}
 	}
-	if err := zw.Close(); err != nil {
-		t.Fatal(err)
-	}
-	if err := inner.Close(); err != nil {
-		t.Fatal(err)
-	}
-	return innerPath
+	return errors.Join(zw.Close(), inner.Close())
 }
 
 func TestUnpackPreflightsEveryAppBeforeMutation(t *testing.T) {

@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 
 	"github.com/tez-capital/tezbake/cli"
 	"github.com/tez-capital/tezbake/constants"
@@ -359,6 +360,15 @@ func WriteFileAtomic(filePath string, data []byte, mode os.FileMode) error {
 	if _, err := tmp.Write(data); err != nil {
 		tmp.Close()
 		return err
+	}
+	// like os.WriteFile, a replacement keeps the owner (e.g. the signer user reading idkey); a planted symlink does not count
+	if info, err := os.Lstat(filePath); err == nil && info.Mode().IsRegular() {
+		if owner, ok := info.Sys().(*syscall.Stat_t); ok {
+			if err := tmp.Chown(int(owner.Uid), int(owner.Gid)); err != nil {
+				tmp.Close()
+				return err
+			}
+		}
 	}
 	if err := tmp.Chmod(mode); err != nil {
 		tmp.Close()
